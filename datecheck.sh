@@ -1,12 +1,19 @@
+#!/bin/bash
+
+if [ $# -ne 3 ]
+then
+	echo "BAD INPUT: wrong number of arguments; 3 needed (month day year)"
+	exit
+fi
 
 check_year()
 {
     YEAR=$1
-    if (( $YEAR % 4 == 0 ));
+    if (( $YEAR % 4 == 0 ))
     then
-        if (( $YEAR % 100 == 0 ));
+        if (( $YEAR % 100 == 0 ))
         then
-            if (( $YEAR % 400 == 0 ));
+            if (( $YEAR % 400 == 0 ))
             then
                 return 1
             fi
@@ -32,7 +39,7 @@ fi
 if ! [[ $DAY =~ ^[0-9]+$ ]]
 then
     echo "BAD INPUT: Input day is not a number"
-    exit 1
+    exit 1 
 fi
 
 if ! [[ $YEAR =~ ^[0-9]+$ ]]
