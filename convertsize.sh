@@ -2,17 +2,29 @@
 
 usage() { echo "Usage: $0 [integer][B|KB|MB|GB]"; exit 1; }
 
+# Validate number of arguments
 if  [ $# != 1 ] 
 then
     usage
 fi
 
-RESULT=$(echo $1 | grep -o '[0-9]*')
+RESULT=$(echo $1 | grep -o -e '\-\?[0-9]*')
 UNIT=$(echo $1 | grep -o '[A-Z]*')
-echo $UNIT
-echo $(expr $RESULT )
+echo "<debug print> value=$RESULT, unit=$UNIT"
+
+if [ ! $RESULT ]
+then 
+    echo "Error: no number"
+    usage 
+# TODO should negative input values be valid? 
+elif [ $RESULT -lt 0 ]
+then
+    echo "Error: integer must be non-negative"
+    usage 
+fi
 
 # Is there a way to perform the same but with less repetition?
+# Convert
 case $UNIT in
     B)
         b=$RESULT
@@ -39,8 +51,13 @@ case $UNIT in
         kb=$(echo "${mb}*1024" | bc)
         b=$(echo "${kb}*1024" | bc)
     ;;
+	*)
+		echo "Error: unkown unit '$UNIT'"
+		usage
+	;;
 esac
 
+# Print result
 echo "Bytes = ${b}"
 echo "Kilobytes = ${kb}"
 echo "Megabytes = ${mb}"
