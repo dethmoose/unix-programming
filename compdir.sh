@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # Check if given dir exists
 # Ensure user is in parent dir of the given dir
@@ -8,9 +8,7 @@
 # 'du' and 'awk'
 
 error() { 
-    if [ $# -eq 1 ]; then
-        echo $1 
-    fi
+    echo $1
     exit 1
 }
 
@@ -21,7 +19,7 @@ NAME=$1
 
 # Verify dir exists
 if [ ! $(find $NAME -type d 2>/dev/null) ]; then # -path ?
-    # Prevent find from printing error messages in terminal
+    # 2>/dev/null redirects stderr to /dev/null because we do not want find to print errors.
     error "Cannot find directory $NAME"
 fi
 
