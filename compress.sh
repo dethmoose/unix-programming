@@ -1,67 +1,52 @@
-#!/bin/bash
+#!/bin/sh
 
 # Print message then exit 
 error() { echo $1; exit; }
-
-# Compress with different tools, return name of best tool
-compress() {
-    local best_tool="-"
-
-    # Run commands in parallel
-    gzip --keep $1 & 
-    P1=$!
-    bzip2 --keep $1 & 
-    P2=$!
-    p7zip --keep $1 & 
-    P3=$!
-    lzop $1 &
-    P4=$!
-    wait $P1 $P2 $P3 $P4 # wait for all processes to finish before continuing
-
-    # Retain smallest file, remove the others
-    o_size=$(wc -c $1 | awk '{print $1}')
-    g_size=$(wc -c $1.gz | awk '{print $1}')
-    b_size=$(wc -c $1.bz2 | awk '{print $1}')
-    p_size=$(wc -c $1.7z | awk '{print $1}')
-    l_size=$(wc -c $1.lzo | awk '{print $1}') 
-    # TODO compare sizes
-    
-    # Debug printing sizes temporarily
-    echo "[$o_size, $g_size, $b_size, $p_size, $l_size]" # $best_tool
-}
-
-get_suffix() {
-    case $1 in
-        gzip)
-            echo "gz"
-            ;;
-        bzip2)
-            echo "bz2"
-            ;;
-        p7zip)
-            echo "7z"
-            ;;
-        lzop)
-            echo "lzo"
-            ;;
-        *)
-            echo "-"
-            ;;
-    esac
-}
 
 # Validate number of arguments
 if [ $# -ne 1 ]; then
     error "1 argument needed (file to compress)"
 fi
+
 filename=$1
+best_tool="-"
 
-# Compress
-best_tool=$(compress $filename)
-suffix=$(get_suffix $best_tool)
+# Run commands in parallel
+gzip --keep -q $filename & 
+P1=$!
+bzip2 --keep -q $filename & 
+P2=$!
+p7zip --keep $filename >/dev/null & 
+P3=$!
+lzop -q $filename &
+P4=$!
+# wait for all processes to finish before continuing
+wait $P1 $P2 $P3 $P4 
 
-# Remove original file
-# rm $filename
+# Which is the smallest file
+s_size=$(du -b $filename | awk '{print $1}')
+s_filename=$filename
+for file in $(find ${filename}.*)
+do  
+    temp=$(du -b $file | awk '{print $1}')
+    if [ $temp -lt $s_size ]; then
+        s_size=$temp
+        s_filename=$file
+        best_tool=$(echo $file | sed 's/.*\.//')
+    fi
+done
+# Remove all compressed files except for the smallest file (including original file).
+if [ $s_filename = $filename ]; then
+    echo "Original file is the smallest."
+    rm ${filename}.*
+else
+    for file in $(find ${filename}*)
+    do
+        if [ $file != "$filename.$best_tool" ]; then
+            rm $file
+        fi
+    done
+fi
 
 # Print result
-echo "Most compression obtained with $best_tool. Compressed file is $filename.$suffix"
+echo "Most compression obtained with $best_tool. Compressed file is $s_filename"

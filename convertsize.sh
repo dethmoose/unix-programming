@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 usage() { echo "Usage: $0 [integer][B|KB|MB|GB]"; exit 1; }
 
