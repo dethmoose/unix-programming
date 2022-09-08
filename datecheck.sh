@@ -1,7 +1,5 @@
 #!/bin/sh
 
-# TODO handle long month names
-
 error() { echo $1; exit 1; }
 
 if [ $# -ne 3 ]; then
@@ -43,6 +41,12 @@ if [ "$(echo $MONTH | grep -E '^[[:digit:]]+$')" ]; then
 else
     MONTH=$(echo $MONTH | tr '[:upper:]' '[:lower:]')   # to lowercase  
     MONTH=$(echo $MONTH | sed -e "s/\b./\u\0/g")        # uppercase first char
+    # If long name, cut down to first 3 chars
+    case $MONTH in 
+        January|February|March|April|June|July|August|September|October|November|December)
+            MONTH=$(echo $MONTH | cut --characters -3)
+        ;;
+    esac
 fi
 
 if [ ! $(echo $DAY | grep -E '^[[:digit:]]+$') ]; then
