@@ -13,28 +13,27 @@ best_tool="-"
 
 # Run commands in parallel
 gzip --keep -q $filename & 
-P1=$!
 bzip2 --keep -q $filename & 
-P2=$!
 p7zip --keep $filename >/dev/null & 
-P3=$!
 lzop -q $filename &
-P4=$!
-# wait for all processes to finish before continuing
-wait $P1 $P2 $P3 $P4 
+wait # wait for all processes to finish before continuing
 
-# Which is the smallest file
+# Find the smallest file
 s_size=$(du -b $filename | awk '{print $1}')
 s_filename=$filename
+# echo "$filename , size $s_size"
+
 for file in $(find ${filename}.*)
 do  
     temp=$(du -b $file | awk '{print $1}')
+    # echo "$file , size $temp"
     if [ $temp -lt $s_size ]; then
         s_size=$temp
         s_filename=$file
         best_tool=$(echo $file | sed 's/.*\.//')
     fi
 done
+
 # Remove all compressed files except for the smallest file (including original file).
 if [ $s_filename = $filename ]; then
     echo "Original file is the smallest."
@@ -46,7 +45,7 @@ else
             rm $file
         fi
     done
-fi
 
-# Print result
-echo "Most compression obtained with $best_tool. Compressed file is $s_filename"
+    # Print result
+    echo "Most compression obtained with $best_tool. Compressed file is $s_filename"
+fi

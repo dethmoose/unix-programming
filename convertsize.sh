@@ -1,30 +1,27 @@
 #!/bin/sh
 
+# TODO `./convertsize.sh 4096KB` prints `Megabytes = 4.0000` instead of `Megabytes = 4.00` 
+
 usage() { echo "Usage: $0 [integer][B|KB|MB|GB]"; exit 1; }
 
 # Validate number of arguments
-if  [ $# != 1 ] 
-then
+if  [ $# != 1 ]; then
     usage
 fi
 
 RESULT=$(echo $1 | grep -o -e '\-\?[0-9]*')
 UNIT=$(echo $1 | grep -o '[A-Z]*')
-echo "<debug print> value=$RESULT, unit=$UNIT"
 
-if [ ! $RESULT ]
-then 
+if [ ! $RESULT ] || [ "$RESULT" = "-" ]; then 
     echo "Error: no number"
     usage 
-# TODO should negative input values be valid? 
-elif [ $RESULT -lt 0 ]
-then
+elif [ $RESULT -lt 0 ]; then
     echo "Error: integer must be non-negative"
     usage 
 fi
 
-# Is there a way to perform the same but with less repetition?
 # Convert
+# TODO Is there a way to perform the same but with less repetition?
 case $UNIT in
     B)
         b=$RESULT
