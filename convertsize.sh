@@ -1,7 +1,5 @@
 #!/bin/sh
 
-# TODO `./convertsize.sh 4096KB` prints `Megabytes = 4.0000` instead of `Megabytes = 4.00` 
-
 usage() { echo "Usage: $0 [integer][B|KB|MB|GB]"; exit 1; }
 
 # Validate number of arguments
