@@ -19,7 +19,6 @@ elif [ $RESULT -lt 0 ]; then
 fi
 
 # Convert
-# TODO Is there a way to perform the same but with less repetition?
 case $UNIT in
     B)
         b=$RESULT
