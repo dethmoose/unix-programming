@@ -1,8 +1,21 @@
+client:
+	gcc -w -O2 ./src/client.c -o client 
+
+server:
+	gcc -w -O2 -lpthread ./src/server.c -o server
+
+matinv-par:
+	gcc -w -O2 ./src/matinv-par.c -o matinv-par
+
+kmeans-par: 
+	gcc -w -O2 ./src/kmeans-par.c -o kmeans-par
+
 matinv:
-	gcc -Wall ./src/matrix_inverse.c -o ./src/matinv
+	gcc -w -O2 ./src/matrix_inverse.c -o matinv
 
 kmeans: 
-	gcc -Wall ./src/kmeans.c -o ./src/kmeans
+	gcc -w -O2 ./src/kmeans.c -o kmeans
 
 clean:
-	rm -f *.o a.out ./src/kmeans ./src/matinv ./../computed_results/kmeans-results.txt
+	rm -f client kmeans kmeans-par matinv matinv-par server 
+# ./../computed_results/kmeans-results.txt
