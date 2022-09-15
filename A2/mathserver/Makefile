@@ -1,3 +1,7 @@
+all:
+	gcc -w -O2 ./src/client.c -o client
+	gcc -w -O2 -lpthread ./src/server.c -o server
+	
 client:
 	gcc -w -O2 ./src/client.c -o client 
 
