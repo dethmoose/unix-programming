@@ -14,34 +14,32 @@
 
 typedef double matrix[MAX_SIZE][MAX_SIZE];
 
-int N;              // matrix size
-int maxnum;         // max number of element
-char *Init;         // matrix init type
-int PRINT;          // print switch
-matrix A;           // matrix A
-matrix I = {{0.0}}; // The A inverse matrix, which will be initialized to the identity matrix
+int N, PRINT, maxnum; // matrix size, print switch, max number of element
+char *Init;           // matrix init type
+matrix A;             // matrix A
+matrix I = {{0.0}};   // the A inverse matrix, which will be initialized to the identity matrix
 
 // forward declarations
 void find_inverse(void);
-void Init_Matrix(void);
-void Print_Matrix(matrix M, char name[]);
-void Init_Default(void);
-int Read_Options(int, char **);
+void init_matrix(void);
+void print_matrix(matrix M, char name[]);
+void init_default(void);
+int read_options(int, char *[]);
 
-int main(int argc, char **argv)
+int main(int argc, char *argv[])
 {
     printf("Matrix Inverse\n");
     // int i, timestart, timeend, iter;
 
-    Init_Default();           // Init default values
-    Read_Options(argc, argv); // Read arguments
-    Init_Matrix();            // Init the matrix
+    init_default();
+    read_options(argc, argv);
+    init_matrix();
     find_inverse();
 
     if (PRINT == 1)
     {
-        // Print_Matrix(A, "End: Input");
-        Print_Matrix(I, "Inversed");
+        // print_matrix(A, "End: Input");
+        print_matrix(I, "Inversed");
     }
 }
 
@@ -78,7 +76,7 @@ void find_inverse()
     }
 }
 
-void Init_Matrix()
+void init_matrix()
 {
     int row, col;
 
@@ -129,12 +127,12 @@ void Init_Matrix()
     printf("done \n\n");
     if (PRINT == 1)
     {
-        Print_Matrix(A, "Begin: Input");
-        Print_Matrix(I, "Begin: Inverse");
+        print_matrix(A, "Begin: Input");
+        print_matrix(I, "Begin: Inverse");
     }
 }
 
-void Print_Matrix(matrix M, char name[])
+void print_matrix(matrix M, char name[])
 {
     int row, col;
 
@@ -148,7 +146,8 @@ void Print_Matrix(matrix M, char name[])
     printf("\n\n");
 }
 
-void Init_Default()
+// init default values
+void init_default()
 {
     N = 5;
     Init = "fast";
@@ -156,7 +155,8 @@ void Init_Default()
     PRINT = 1;
 }
 
-int Read_Options(int argc, char **argv)
+// read arguments
+int read_options(int argc, char *argv[])
 {
     char *prog;
     prog = *argv;
