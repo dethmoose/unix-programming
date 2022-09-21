@@ -1,4 +1,5 @@
 all:
+	rm -f client kmeans kmeans-par matinv matinv-par server 
 	gcc -w -O2 ./src/client.c -o client
 	gcc -w -O2 -lpthread ./src/server.c -o server
 	

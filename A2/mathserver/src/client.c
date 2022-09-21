@@ -4,14 +4,6 @@
 #include <netinet/in.h>
 
 void validate_args(int argc, char *argv[]);
-// int connect(char *ip_addr, int port_no);
-// int command();
-// void help_text();
-// char *send(char *command);
-
-// Command line options to handle:
-// -p port
-// -ip address
 
 int main(int argc, char *argv[])
 {
@@ -31,17 +23,17 @@ int main(int argc, char *argv[])
         printf("Error\n");
         exit(1);
     }
-
-    int running = 1;
-    while (running)
+    
+    while (1)
     {
         char strData[255];
         printf("Enter a command for the server: ");
         fgets(strData, 255, stdin);
+        strData[strlen(strData)-1] = '\0';
         send(server_socket, strData, sizeof(strData), 0);
 
         recv(server_socket, strData, sizeof(strData), 0);
-        printf("Received the solution: %s", strData);
+        printf("Received the solution: %s\n", strData);
     }
     exit(0);
 }
@@ -53,29 +45,8 @@ void validate_args(int argc, char *argv[])
         printf("Error\n");
         exit(1);
     }
+
+    // TODO Command line options to handle:
+    // -p port
+    // -ip address
 }
-
-// // Connect to server
-// int connect(char *ip_addr, int port_no)
-// {
-//     printf("Connected to server\n");
-//     return 0;
-// }
-
-// // Take user input, send message, present solution
-// int command()
-// {
-//     char *solution = "-", *msg = "-";
-
-//     printf("Enter a command for the server: ");
-//     printf("\n");
-//     solution = send(msg);
-//     printf("Recieved the solution: %s\n", solution);
-//     return 0;
-// }
-
-// // Send a command to server
-// char *send(char *msg)
-// {
-//     return "-";
-// }
