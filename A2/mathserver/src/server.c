@@ -31,7 +31,7 @@ int main(int argc, char *argv[])
     if (argc < 2)
         usage();
     read_options(argc, argv);
-    // printf("Port number: %d, daemon: %d, strategy: %s", port, d, strat);
+    // printf("Port number: %d, daemon: %d, strategy: %s\n", port, d, strat);
 
     signal(SIGPIPE, SIG_IGN);
     signal(SIGCHLD, SIG_IGN);

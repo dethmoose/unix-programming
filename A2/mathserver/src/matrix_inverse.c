@@ -128,7 +128,7 @@ void init_matrix()
     if (PRINT == 1)
     {
         print_matrix(A, "Begin: Input");
-        print_matrix(I, "Begin: Inverse");
+        // print_matrix(I, "Begin: Inverse");
     }
 }
 
