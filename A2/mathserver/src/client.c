@@ -3,15 +3,23 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
-void validate_args(int argc, char *argv[]);
+// Default values
+int port = -1;
+char *ip = "";
+
+int usage();
+void read_options(int argc, char *argv[]);
 
 int main(int argc, char *argv[])
 {
-    validate_args(argc, argv);
+    if (argc < 2) // ip address optional?
+        usage();
+    read_options(argc, argv);
+    // printf("Port number: %d, ip address: %s\n", port, ip);
+
     int server_socket = socket(AF_INET, SOCK_STREAM, 0);
 
     struct sockaddr_in server_address;
-
     server_address.sin_family = AF_INET;
     server_address.sin_port = atoi(argv[1]);
     server_address.sin_addr.s_addr = INADDR_ANY;
@@ -20,16 +28,16 @@ int main(int argc, char *argv[])
 
     if (connect_status == -1)
     {
-        printf("Error\n");
+        printf("Error: cannot connect\n");
         exit(1);
     }
-    
+
     while (1)
     {
         char strData[255];
         printf("Enter a command for the server: ");
         fgets(strData, 255, stdin);
-        strData[strlen(strData)-1] = '\0';
+        strData[strlen(strData) - 1] = '\0';
         send(server_socket, strData, sizeof(strData), 0);
 
         recv(server_socket, strData, sizeof(strData), 0);
@@ -38,15 +46,45 @@ int main(int argc, char *argv[])
     exit(0);
 }
 
-void validate_args(int argc, char *argv[])
+void read_options(int argc, char *argv[])
 {
-    if (argc < 2 || argc > 5)
-    {
-        printf("Error\n");
-        exit(1);
-    }
+    char *prog;
+    prog = *argv;
 
-    // TODO Command line options to handle:
-    // -p port
-    // -ip address
+    while (++argv, --argc > 0)
+    {
+        if (**argv == '-')
+        {
+            switch (*++*argv)
+            {
+            case 'i':
+                --argc;
+                ip = *++argv;
+                break;
+
+            case 'p':
+                --argc;
+                port = atoi(*++argv);
+                break;
+
+            case 'h':
+            case 'u':
+                usage();
+                break;
+
+            default:
+                printf("%s: ignored option: -%s\n", prog, *argv);
+                printf("HELP: try %s -h \n\n", prog);
+                break;
+            }
+        }
+    }
+}
+
+int usage()
+{
+    printf("\nUsage: client [-p port]\n");
+    printf("              [-i address]  ip address \n");
+    printf("              [-h]          help \n");
+    exit(1);
 }

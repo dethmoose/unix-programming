@@ -10,7 +10,13 @@
 // TODO Execute kmeans and matinv
 // TODO Send output file to client
 
-void validate_args(int argc, char *argv[]);
+// Default values
+int port = -1;
+int d = 0;
+char *strat = "fork";
+
+int usage();
+void read_options(int argc, char *argv[]);
 
 // Filenames for output files, incrementing id
 int client_num;
@@ -22,7 +28,11 @@ client_num = 0;
 // Server should handle concurrent clients
 int main(int argc, char *argv[])
 {
-    validate_args(argc, argv);
+    if (argc < 2)
+        usage();
+    read_options(argc, argv);
+    // printf("Port number: %d, daemon: %d, strategy: %s", port, d, strat);
+
     signal(SIGPIPE, SIG_IGN);
     signal(SIGCHLD, SIG_IGN);
     int server_socket = socket(AF_INET, SOCK_STREAM, 0);
@@ -48,16 +58,18 @@ int main(int argc, char *argv[])
             printf("%d\n", thispid);
             int solution_num;
             solution_num = 0;
-            while(1) {
+            while (1)
+            {
                 solution_num++;
                 char msg[255];
                 int err;
                 err = recv(client_socket, msg, sizeof(msg), 0);
-                if (err == 0) {
+                if (err == 0)
+                {
                     printf("Closing socket\n");
                     close(client_socket);
                     exit(0);
-                } 
+                }
                 // exec command, get filename of solution
                 int status = system("ls");
                 // kmeans(*, client_num, solution_num);
@@ -70,29 +82,51 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-void validate_args(int argc, char *argv[])
+void read_options(int argc, char *argv[])
 {
-    // printf("Validating args (%d): ", argc);
-    // for (int i = 0; i < argc; i++)
-    // {
-    //     printf("'%s' ", argv[i]);
-    // }
-    // printf("\n");
-    if (argc < 2)
+    char *prog;
+    prog = *argv;
+
+    while (++argv, --argc > 0)
     {
-        printf("Error\n");
-        exit(1);
+        if (**argv == '-')
+        {
+            switch (*++*argv)
+            {
+            case 'd':
+                --argc;
+                d = atoi(*++argv);
+                break;
+
+            case 'p':
+                --argc;
+                port = atoi(*++argv);
+                break;
+
+            case 's':
+                --argc;
+                strat = *++argv;
+                break;
+
+            case 'h':
+            case 'u':
+                usage();
+                break;
+
+            default:
+                printf("%s: ignored option: -%s\n", prog, *argv);
+                printf("HELP: try %s -h \n\n", prog);
+                break;
+            }
+        }
     }
+}
 
-    // Default values
-    int port_no = -1;
-    int d = 1;
-    char *strategy = "fork";
-
-    // Command line options to handle:
-    // -h           (Print help text)
-    // -p port      (Listen to port number port.)
-    // -d           (Run as a daemon instead of as a normal program.)
-    // -s strategy  (Specify the request handling strategy : fork, muxbasic, or muxscale)
-    // TODO read daemon, ip, port
+int usage()
+{
+    printf("\nUsage: server [-p port]\n");
+    printf("              [-d]            run as daemon \n");
+    printf("              [-s strategy]   specify the request handling strategy : fork/muxbasic/muxscale \n");
+    printf("              [-h]            help \n");
+    exit(1);
 }

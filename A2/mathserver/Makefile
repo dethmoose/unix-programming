@@ -1,7 +1,8 @@
 all:
-	rm -f client kmeans kmeans-par matinv matinv-par server 
+	rm -f client server matinv kmeans
 	gcc -w -O2 ./src/client.c -o client
 	gcc -w -O2 -lpthread ./src/server.c -o server
+	gcc -w -O2 ./src/matinv-par.c -o matinv
 	
 client:
 	gcc -w -O2 ./src/client.c -o client 
@@ -10,10 +11,10 @@ server:
 	gcc -w -O2 -lpthread ./src/server.c -o server
 
 matinv-par:
-	gcc -w -O2 ./src/matinv-par.c -o matinv-par
+	gcc -w -O2 ./src/matinv-par.c -o matinv
 
 kmeans-par: 
-	gcc -w -O2 ./src/kmeans-par.c -o kmeans-par
+	gcc -w -O2 ./src/kmeans-par.c -o kmeans
 
 matinv:
 	gcc -w -O2 ./src/matrix_inverse.c -o matinv
