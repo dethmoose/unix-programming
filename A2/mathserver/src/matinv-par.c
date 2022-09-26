@@ -28,10 +28,11 @@ matrix I = {{0.0}};   // the A inverse matrix, which will be initialized to the 
 
 // forward declarations
 int read_options(int, char *[]);
-void find_inverse();
 void init_default(void);
 void init_matrix(void);
 void print_matrix(matrix M, char name[]);
+void divide_by_pivot_value(int p, int col, double pval);
+void multiply_columns(int row, int p);
 void *child(void *params);
 
 void main(int argc, char *argv[])
@@ -41,11 +42,13 @@ void main(int argc, char *argv[])
     read_options(argc, argv);
     init_matrix();
 
+    pthread_barrier_init(&barrier, NULL, N);
     pthread_t *children;     // dynamic array of child threads
     struct threadArgs *args; // argument buffer
 
     children = malloc(N * sizeof(pthread_t));     // allocate array of handles
     args = malloc(N * sizeof(struct threadArgs)); // args vector
+
     for (int i = 0; i < N; i++)
     {
         args[i].id = i;
@@ -60,26 +63,77 @@ void main(int argc, char *argv[])
     {
         pthread_join(children[j], NULL);
     }
-    printf("All threads done...\n\n");
 
     if (PRINT == 1)
     {
         // print_matrix(A, "End: Input");
         print_matrix(I, "Inversed");
     }
+    pthread_barrier_destroy(&barrier);
     free(args);
     free(children);
 }
 
+/*
+ * for every p (0 ... N):
+ *     save pval = A[p][p]
+ *     for every column:
+ *         A[p][col] /= pval
+ *         I[p][col] /= pval
+ *         // atomic operations, only modifying single cells
+ *
+ *     for every row:
+ *         save multiplier = A[row][p]
+ *         if row != p:
+ *             for every column:
+ *                  A[row][col] -= A[p][col] * multiplier
+ *                  I[row][col] -= I[p][col] * multiplier
+ *                  // can be done parallel
+ */
+
 void *child(void *params)
 {
     struct threadArgs *args = (struct threadArgs *)params;
-    unsigned int id = args->id;
-    // printf("Thread %d\n", id);
+    int row, col;
+    row = col = args->id;
+
+    for (int p = 0; p < N; p++)
+    {
+        double pval = A[p][p];
+        pthread_barrier_wait(&barrier);
+
+        divide_by_pivot_value(p, col, pval);
+        pthread_barrier_wait(&barrier);
+        assert(A[p][p] == 1.0);
+
+        // pthread_barrier_wait(&barrier);
+        multiply_columns(row, p);
+        pthread_barrier_wait(&barrier);
+    }
 }
 
-// TODO: parallelize algorithm
-void find_inverse() {}
+void divide_by_pivot_value(int p, int col, double pval)
+{
+    if (pval != 0)
+    {
+        A[p][col] /= pval;
+        I[p][col] /= pval;
+    }
+}
+
+void multiply_columns(int row, int p)
+{
+    if (row != p)
+    {
+        double multiplier = A[row][p];
+        for (int col = 0; col < N; col++)
+        {
+            A[row][col] -= A[p][col] * multiplier;
+            I[row][col] -= I[p][col] * multiplier;
+        }
+        assert(A[row][p] == 0.0);
+    }
+}
 
 void init_matrix()
 {
@@ -93,7 +147,6 @@ void init_matrix()
         {
             if (row == col)
                 I[row][col] = 1.0;
-            // TODO: why not init the rest of the values to 0.0?
         }
     }
 
