@@ -15,7 +15,6 @@
 
 typedef double matrix[MAX_SIZE][MAX_SIZE];
 pthread_barrier_t barrier;
-pthread_mutex_t mutex;
 struct threadArgs
 {
     unsigned int id;
@@ -74,23 +73,6 @@ void main(int argc, char *argv[])
     free(children);
 }
 
-/*
- * for every p (0 ... N):
- *     save pval = A[p][p]
- *     for every column:
- *         A[p][col] /= pval
- *         I[p][col] /= pval
- *         // atomic operations, only modifying single cells
- *
- *     for every row:
- *         save multiplier = A[row][p]
- *         if row != p:
- *             for every column:
- *                  A[row][col] -= A[p][col] * multiplier
- *                  I[row][col] -= I[p][col] * multiplier
- *                  // can be done parallel
- */
-
 void *child(void *params)
 {
     struct threadArgs *args = (struct threadArgs *)params;
@@ -106,7 +88,6 @@ void *child(void *params)
         pthread_barrier_wait(&barrier);
         assert(A[p][p] == 1.0);
 
-        // pthread_barrier_wait(&barrier);
         multiply_columns(row, p);
         pthread_barrier_wait(&barrier);
     }
