@@ -41,13 +41,14 @@ int main(int argc, char *argv[])
         send(server_socket, strData, sizeof(strData), 0);
 
         recv(server_socket, strData, sizeof(strData), 0);
-        printf("Received the solution: %s\n", strData);
+        // parse filename, file content
+        printf("Received the solution: %s\n", strData); // TODO only print filename
 
         // create file
         char create_file[281] = "touch ../computed_results/";
         strcat(create_file, strData);
         // TODO: fill file with data
-        int status = system(create_file);
+        // int status = system(create_file);
     }
     exit(0);
 }

@@ -6,6 +6,7 @@
 #include <signal.h>
 #include <unistd.h>
 
+// TODO popen() instead of system()
 // TODO zombie processes
 // TODO Handle arguments for kmeans and matinv
 // TODO Send output file to client (or just filename and data and then client creates file)
@@ -18,12 +19,10 @@ char *strat = "fork";
 int usage();
 void read_options(int argc, char *argv[]);
 char *validate_command(char command[]);
-char *execute_command(char command[], char program[], int client_num, int solution_num);
+int execute_command(char command[], char program[], char data[], int size_d);
 
 // Filenames for output files, incrementing id
-int client_num;
-client_num = 0;
-// int solution_num = 0;
+int client_num = 0, solution_num = 0;
 // kmeans_client<i>_soln<j>.txt
 // matinv_client<i>_soln<j>.txt
 
@@ -57,7 +56,6 @@ int main(int argc, char *argv[])
         {
             // int thispid = getpid();
             // printf("pid: %d\n", thispid);
-            int solution_num;
             solution_num = 0;
 
             while (1)
@@ -73,11 +71,13 @@ int main(int argc, char *argv[])
                     exit(0);
                 }
 
-                // char *cmd = validate_command(msg); // TODO validate function
                 char cmd[7];
+                // cmd = validate_command(msg); // TODO validate function
+
+                // validate command
                 snprintf(cmd, sizeof(cmd), "%.6s", msg); // 6 first chars
 
-                if (strlen(msg) < 6 || (strcmp(cmd, "matinv") != 0 && strcmp(cmd, "kmeans") != 0))
+                if (strcmp(cmd, "matinv") != 0 && strcmp(cmd, "kmeans") != 0)
                 {
                     char error[] = "Error! Valid commands: 'matinv' or 'kmeans'";
                     send(client_socket, error, sizeof(error), 0);
@@ -85,8 +85,9 @@ int main(int argc, char *argv[])
                     exit(0);
                 }
 
-                char *solution_data = execute_command(msg, cmd, client_num, solution_num);
-                send(client_socket, solution_data, sizeof(solution_data), 0);
+                char data[30];
+                execute_command(msg, cmd, data, sizeof(data));
+                send(client_socket, data, strlen(data) + 1, 0);
             }
         }
     }
@@ -158,41 +159,46 @@ int usage()
 char *validate_command(char command[])
 {
     char cmd[7];
-    snprintf(cmd, sizeof(cmd), "%.6s", command); // 6 first chars of command
-    printf("First word: %s\n", cmd);
+    sprintf(cmd, 7, "%.6s", command); // 6 first chars of command
 
-    if (strlen(command) < 6 || (strcmp(cmd, "matinv") != 0 && strcmp(cmd, "kmeans") != 0))
+    if (strcmp(cmd, "matinv") != 0 && strcmp(cmd, "kmeans") != 0)
     {
-        printf("Valid commands: 'matinv' or 'kmeans'\n");
+        printf("Valid commands: 'matinv' or 'kmeans'\n"); // TODO should be shown to client instead
         return "";
     }
-    printf("validate_command: returning '%s'\n", cmd);
     return cmd;
 }
 
-char *execute_command(char command[], char program[], int client_num, int solution_num)
+int execute_command(char command[], char program[], char data[], int size_d)
 {
     char path[257] = "./";
     strcat(path, command);
-    int status = system(path); // execute e.g."./matinv"
-    printf("Executed with status %d\n", status);
+    printf("%s\n", program);
 
-    // returns -1 even when successful?
-    // if (status == -1)
-    // {
-    //     send(client_socket, "error", 6, 0);
-    //     close(client_socket);
-    //     exit(0);
+    char redirect_output[19] = " >> ./tempfile.txt";
+    strcat(path, redirect_output);
+
+    // char output[1035];
+    // FILE* fp = popen(path, "r");
+    // while (fgets(output, sizeof(output), fp) != NULL) {
+    //     send(client)
     // }
+    // pclose(fp;)
+
+    system(path); // execute e.g."./matinv -n 4"
 
     // TODO: get output from matinv/kmeans as a string, add it to `data`
     // so that the solution is sent in the form of "filename\nfiledata" to client,
     // then client can create a file with that filename and data under computed_results
 
-    char example_content[] = "Example file content.";
-    char data[277];
-    sprintf(data, "%s_client%d_soln%d.txt\n", program, client_num, solution_num);
-    strcat(data, example_content);
-    printf("Data: %s\n", data);
-    return data;
+    // FILE *fp;
+    // fp = fopen("./tempfile.txt", "r");
+    // char content[] = read(fp);
+    // fclose(fp);
+
+    snprintf(data, size_d, "%s_client%d_soln%d.txt", program, client_num, solution_num);
+    // strcat(data, content);
+    // system("rm ./tempfile.txt");
+    printf("execute_command: data: %s\n", data);
+    return 0;
 }
