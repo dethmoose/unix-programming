@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
 
     struct sockaddr_in server_address;
     server_address.sin_family = AF_INET;
-    server_address.sin_port = atoi(argv[1]);
+    server_address.sin_port = port;
     server_address.sin_addr.s_addr = INADDR_ANY;
 
     int connect_status = connect(server_socket, (struct sockaddr *)&server_address, sizeof(server_address));
@@ -42,6 +42,12 @@ int main(int argc, char *argv[])
 
         recv(server_socket, strData, sizeof(strData), 0);
         printf("Received the solution: %s\n", strData);
+
+        // create file
+        char create_file[281] = "touch ../computed_results/";
+        strcat(create_file, strData);
+        // TODO: fill file with data
+        int status = system(create_file);
     }
     exit(0);
 }
@@ -84,7 +90,7 @@ void read_options(int argc, char *argv[])
 int usage()
 {
     printf("\nUsage: client [-p port]\n");
-    printf("              [-i address]  ip address \n");
-    printf("              [-h]          help \n");
+    printf("              [-ip address]\n");
+    printf("              [-h]          help\n");
     exit(1);
 }
