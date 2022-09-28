@@ -5,6 +5,7 @@
 #include <netinet/in.h>
 #include <signal.h>
 #include <unistd.h>
+#include <errno.h>
 
 // TODO popen() instead of system()
 // TODO zombie processes
@@ -54,6 +55,7 @@ int main(int argc, char *argv[])
         pid_t pid = fork();
         if (pid == 0) // child process
         {
+            printf("Connected with client %d\n", client_num);
             // int thispid = getpid();
             // printf("pid: %d\n", thispid);
             solution_num = 0;
@@ -71,6 +73,8 @@ int main(int argc, char *argv[])
                     exit(0);
                 }
 
+                printf("Client %d commanded: %s\n", client_num, msg);
+
                 char cmd[7];
                 // cmd = validate_command(msg); // TODO validate function
 
@@ -86,7 +90,26 @@ int main(int argc, char *argv[])
                 }
 
                 char data[30];
-                execute_command(msg, cmd, data, sizeof(data));
+
+                char command[30] = "./";
+                strcat(command, cmd);
+
+                char output[255] = "";
+                FILE* fp = popen(command, "r");
+
+                while (fgets(output, sizeof(output), fp) != NULL) 
+                {
+                    printf("%s :: strlen %d\n", output, strlen(output));
+                    if ((send(client_socket, output, strlen(output) + 1, 0)) == -1) {
+                        printf(errno);
+                    }
+                }
+
+                pclose(fp);
+                send(client_socket, "eof", strlen("eof") + 1, 0);
+
+                snprintf(data, sizeof(data), "%s_client%d_soln%d.txt", cmd, client_num, solution_num);
+                printf("Sending solution: %s\n", data);
                 send(client_socket, data, strlen(data) + 1, 0);
             }
         }
@@ -167,38 +190,4 @@ char *validate_command(char command[])
         return "";
     }
     return cmd;
-}
-
-int execute_command(char command[], char program[], char data[], int size_d)
-{
-    char path[257] = "./";
-    strcat(path, command);
-    printf("%s\n", program);
-
-    char redirect_output[19] = " >> ./tempfile.txt";
-    strcat(path, redirect_output);
-
-    // char output[1035];
-    // FILE* fp = popen(path, "r");
-    // while (fgets(output, sizeof(output), fp) != NULL) {
-    //     send(client)
-    // }
-    // pclose(fp;)
-
-    system(path); // execute e.g."./matinv -n 4"
-
-    // TODO: get output from matinv/kmeans as a string, add it to `data`
-    // so that the solution is sent in the form of "filename\nfiledata" to client,
-    // then client can create a file with that filename and data under computed_results
-
-    // FILE *fp;
-    // fp = fopen("./tempfile.txt", "r");
-    // char content[] = read(fp);
-    // fclose(fp);
-
-    snprintf(data, size_d, "%s_client%d_soln%d.txt", program, client_num, solution_num);
-    // strcat(data, content);
-    // system("rm ./tempfile.txt");
-    printf("execute_command: data: %s\n", data);
-    return 0;
 }

@@ -15,7 +15,7 @@ matinv-par:
 	gcc -w -O2 ./src/matinv-par.c -o matinv
 
 kmeans-par: 
-	gcc -w -O2 ./src/kmeans-par.c -o kmeans
+	gcc -w -O2 -lpthread ./src/kmeans-par.c -o kmeans
 
 matinv:
 	gcc -w -O2 ./src/matrix_inverse.c -o matinv

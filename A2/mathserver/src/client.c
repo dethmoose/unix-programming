@@ -2,6 +2,9 @@
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <errno.h>
+
+// TODO: use IP address
 
 // Default values
 int port = -1;
@@ -37,17 +40,29 @@ int main(int argc, char *argv[])
         char strData[255];
         printf("Enter a command for the server: ");
         fgets(strData, 255, stdin);
-        strData[strlen(strData) - 1] = '\0';
-        send(server_socket, strData, sizeof(strData), 0);
+        strData[strlen(strData) - 1] = '\0'; // Remove newline from command
+        send(server_socket, strData, strlen(strData) + 1, 0);
 
-        recv(server_socket, strData, sizeof(strData), 0);
         // parse filename, file content
-        printf("Received the solution: %s\n", strData); // TODO only print filename
+        char program_result_buffer[255] = "";
+        while (strcmp(program_result_buffer, "eof") != 0) 
+        {   
+            printf("%s :: strlen %d\n", program_result_buffer, strlen(program_result_buffer));
+            if ((recv(server_socket, program_result_buffer, sizeof(program_result_buffer), 0)) == -1) {
+                printf(errno);
+            }
+            // if (strcmp(program_result_buffer, "eof") != 0)
+            // {
+            //     printf(program_result_buffer);
+            // }
+        }
+        
+        recv(server_socket, strData, sizeof(strData), 0); 
+        printf("Received the solution: %s\n", strData);
 
         // create file
         char create_file[281] = "touch ../computed_results/";
         strcat(create_file, strData);
-        // TODO: fill file with data
         // int status = system(create_file);
     }
     exit(0);
