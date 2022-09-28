@@ -18,6 +18,7 @@ char *strat = "fork";
 int usage();
 void read_options(int argc, char *argv[]);
 char *validate_command(char command[]);
+char *execute_command(char command[], char program[], int client_num, int solution_num);
 
 // Filenames for output files, incrementing id
 int client_num;
@@ -58,6 +59,7 @@ int main(int argc, char *argv[])
             // printf("pid: %d\n", thispid);
             int solution_num;
             solution_num = 0;
+
             while (1)
             {
                 solution_num++;
@@ -83,28 +85,8 @@ int main(int argc, char *argv[])
                     exit(0);
                 }
 
-                // exec command, get filename of solution
-                // kmeans(*, client_num, solution_num);
-
-                char path[257] = "./";
-                strcat(path, msg);
-                int status = system(path); // execute e.g."./matinv"
-
-                // returned -1 even when successful?
-                // if (status == -1)
-                // {
-                //     send(client_socket, "error", 6, 0);
-                //     close(client_socket);
-                //     exit(0);
-                // }
-
-                // TODO: get output from matinv/kmeans as a string, add it to `fname`
-                // so that the solution is sent in the form of "filename\nfiledata" to client,
-                // then client can create a file with that filename and data under computed_results
-
-                char fname[255];
-                sprintf(fname, "%s_client%d_soln%d.txt", cmd, client_num, solution_num);
-                send(client_socket, fname, sizeof(fname), 0);
+                char *solution_data = execute_command(msg, cmd, client_num, solution_num);
+                send(client_socket, solution_data, sizeof(solution_data), 0);
             }
         }
     }
@@ -149,14 +131,26 @@ void read_options(int argc, char *argv[])
             }
         }
     }
+
+    if (!(strat == "fork" || strat == "muxbasic" || strat == "muxscale"))
+    {
+        printf("Ignoring -s %s\n", strat);
+        strat = "fork";
+    }
+
+    if (!(d == 0 || d == 1))
+    {
+        printf("Ignoring -d %d\n", d);
+        d = 0;
+    }
 }
 
 int usage()
 {
     printf("\nUsage: server [-p port]\n");
-    printf("              [-d]            run as daemon \n");
-    printf("              [-s strategy]   specify the request handling strategy : fork/muxbasic/muxscale \n");
-    printf("              [-h]            help \n");
+    printf("              [-d]            run as daemon (0/1)\n");
+    printf("              [-s strategy]   specify the request handling strategy (fork/muxbasic/muxscale)\n");
+    printf("              [-h]            help\n");
     exit(1);
 }
 
@@ -174,4 +168,31 @@ char *validate_command(char command[])
     }
     printf("validate_command: returning '%s'\n", cmd);
     return cmd;
+}
+
+char *execute_command(char command[], char program[], int client_num, int solution_num)
+{
+    char path[257] = "./";
+    strcat(path, command);
+    int status = system(path); // execute e.g."./matinv"
+    printf("Executed with status %d\n", status);
+
+    // returns -1 even when successful?
+    // if (status == -1)
+    // {
+    //     send(client_socket, "error", 6, 0);
+    //     close(client_socket);
+    //     exit(0);
+    // }
+
+    // TODO: get output from matinv/kmeans as a string, add it to `data`
+    // so that the solution is sent in the form of "filename\nfiledata" to client,
+    // then client can create a file with that filename and data under computed_results
+
+    char example_content[] = "Example file content.";
+    char data[277];
+    sprintf(data, "%s_client%d_soln%d.txt\n", program, client_num, solution_num);
+    strcat(data, example_content);
+    printf("Data: %s\n", data);
+    return data;
 }
