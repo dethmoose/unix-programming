@@ -95,18 +95,24 @@ int main(int argc, char *argv[])
                 strcat(command, cmd);
 
                 char output[255] = "";
+                memset(output, 0, sizeof(output));
+
                 FILE* fp = popen(command, "r");
 
                 while (fgets(output, sizeof(output), fp) != NULL) 
                 {
-                    printf("%s :: strlen %d\n", output, strlen(output));
-                    if ((send(client_socket, output, strlen(output) + 1, 0)) == -1) {
+                    printf(output);
+                    if ((send(client_socket, output, strlen(output), 0)) == -1) {
                         printf(errno);
                     }
+                    memset(output, 0, sizeof(output));
+                }
+                pclose(fp);
+
+                if ((send(client_socket, "\nOutput End\n", sizeof("\nOutput End\n"), 0)) == -1) {
+                    printf(errno);
                 }
 
-                pclose(fp);
-                send(client_socket, "eof", strlen("eof") + 1, 0);
 
                 snprintf(data, sizeof(data), "%s_client%d_soln%d.txt", cmd, client_num, solution_num);
                 printf("Sending solution: %s\n", data);

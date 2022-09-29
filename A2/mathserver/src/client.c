@@ -41,20 +41,22 @@ int main(int argc, char *argv[])
         printf("Enter a command for the server: ");
         fgets(strData, 255, stdin);
         strData[strlen(strData) - 1] = '\0'; // Remove newline from command
-        send(server_socket, strData, strlen(strData) + 1, 0);
+        if ((send(server_socket, strData, strlen(strData) + 1, 0)) == -1) {
+            perror("Error sending command.\n");
+        }
 
         // parse filename, file content
-        char program_result_buffer[255] = "";
-        while (strcmp(program_result_buffer, "eof") != 0) 
-        {   
-            printf("%s :: strlen %d\n", program_result_buffer, strlen(program_result_buffer));
-            if ((recv(server_socket, program_result_buffer, sizeof(program_result_buffer), 0)) == -1) {
-                printf(errno);
+        char recvbuf[255] = "";
+        memset(recvbuf, 0, sizeof(recvbuf));
+        int recv_bytes; // How many bytes are recieved by recv(). Used to write specific num of bytes to stdout.
+        while((recv_bytes = recv(server_socket, recvbuf, sizeof(recvbuf), 0)) != 1) {
+            if (recv_bytes == -1 ) {
+                 perror("Error recieving output.\n");
             }
-            // if (strcmp(program_result_buffer, "eof") != 0)
-            // {
-            //     printf(program_result_buffer);
-            // }
+            else {
+                write(1, recvbuf, recv_bytes); // Writes to stdout
+            }
+            if (strstr(recvbuf, "\nOutput End\n") != NULL) {break;}
         }
         
         recv(server_socket, strData, sizeof(strData), 0); 
