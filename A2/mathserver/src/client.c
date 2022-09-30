@@ -3,6 +3,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <errno.h>
+#include <fcntl.h>
 
 // TODO: use IP address
 
@@ -45,27 +46,30 @@ int main(int argc, char *argv[])
             perror("Error sending command.\n");
         }
 
+        recv(server_socket, strData, sizeof(strData), 0); 
+        printf("Received the solution: %s\n", strData);
+
         // parse filename, file content
         char recvbuf[255] = "";
         memset(recvbuf, 0, sizeof(recvbuf));
+
+        FILE* fp = fopen(strData, "a");
+        if (fp == NULL) {
+            printf("Error opening file.\n");
+            exit(1); // Exit here?
+        }
+
         int recv_bytes; // How many bytes are recieved by recv(). Used to write specific num of bytes to stdout.
         while((recv_bytes = recv(server_socket, recvbuf, sizeof(recvbuf), 0)) != 1) {
             if (recv_bytes == -1 ) {
                  perror("Error recieving output.\n");
             }
+            else if (strstr(recvbuf, "\nOutput End\n") != NULL) {break;}
             else {
-                write(1, recvbuf, recv_bytes); // Writes to stdout
+                fwrite(recvbuf, sizeof(char), recv_bytes, fp); // Writes to stdout
             }
-            if (strstr(recvbuf, "\nOutput End\n") != NULL) {break;}
         }
-        
-        recv(server_socket, strData, sizeof(strData), 0); 
-        printf("Received the solution: %s\n", strData);
-
-        // create file
-        char create_file[281] = "touch ../computed_results/";
-        strcat(create_file, strData);
-        // int status = system(create_file);
+        fclose(fp);
     }
     exit(0);
 }

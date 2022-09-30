@@ -89,11 +89,18 @@ int main(int argc, char *argv[])
                     exit(0);
                 }
 
+                // Generate filename
                 char data[30];
+                snprintf(data, sizeof(data), "%s_client%d_soln%d.txt", cmd, client_num, solution_num);
+                printf("Sending solution: %s\n", data);
+                send(client_socket, data, strlen(data) + 1, 0);
 
+                
                 char command[30] = "./";
                 strcat(command, cmd);
 
+                // Start program. Different functions for kmeans and matinv?
+                // Might be necessary to get the results from kmeans? matinv prints to stdout.
                 char output[255] = "";
                 memset(output, 0, sizeof(output));
 
@@ -109,14 +116,12 @@ int main(int argc, char *argv[])
                 }
                 pclose(fp);
 
-                if ((send(client_socket, "\nOutput End\n", sizeof("\nOutput End\n"), 0)) == -1) {
+                if ((send(client_socket, "\nOutput End\n", strlen("\nOutput End\n"), 0)) == -1) {
                     printf(errno);
                 }
 
 
-                snprintf(data, sizeof(data), "%s_client%d_soln%d.txt", cmd, client_num, solution_num);
-                printf("Sending solution: %s\n", data);
-                send(client_socket, data, strlen(data) + 1, 0);
+                
             }
         }
     }
