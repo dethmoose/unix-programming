@@ -53,20 +53,22 @@ int main(int argc, char *argv[])
         char recvbuf[255] = "";
         memset(recvbuf, 0, sizeof(recvbuf));
 
+        // Open file with append. "a" functions as if calling open with O_CREAT | O_WRONLY | O_APPEND
         FILE* fp = fopen(strData, "a");
         if (fp == NULL) {
             printf("Error opening file.\n");
             exit(1); // Exit here?
         }
 
-        int recv_bytes; // How many bytes are recieved by recv(). Used to write specific num of bytes to stdout.
-        while((recv_bytes = recv(server_socket, recvbuf, sizeof(recvbuf), 0)) != 1) {
-            if (recv_bytes == -1 ) {
+        int recv_bytes; // How many bytes are recieved by call to recv().
+        while(1) {
+            if ((recv_bytes = recv(server_socket, recvbuf, sizeof(recvbuf), 0)) == -1 ) {
                  perror("Error recieving output.\n");
             }
             else if (strstr(recvbuf, "\nOutput End\n") != NULL) {break;}
             else {
-                fwrite(recvbuf, sizeof(char), recv_bytes, fp); // Writes to stdout
+                // Writes recv_bytes number of bytes from recvbuf to file.
+                fwrite(recvbuf, sizeof(char), recv_bytes, fp);
             }
         }
         fclose(fp);

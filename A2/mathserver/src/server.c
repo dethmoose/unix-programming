@@ -105,12 +105,11 @@ int main(int argc, char *argv[])
                 memset(output, 0, sizeof(output));
 
                 FILE* fp = popen(command, "r");
-
                 while (fgets(output, sizeof(output), fp) != NULL) 
                 {
                     printf(output);
                     if ((send(client_socket, output, strlen(output), 0)) == -1) {
-                        printf(errno);
+                        perror("Error sending command output.\n");
                     }
                     memset(output, 0, sizeof(output));
                 }
