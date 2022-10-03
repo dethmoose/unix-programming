@@ -34,7 +34,7 @@ void divide_by_pivot_value(int p, int col, double pval);
 void multiply_columns(int row, int p);
 void *child(void *params);
 
-void main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
     printf("Matrix Inverse\n");
     init_default();
@@ -71,6 +71,7 @@ void main(int argc, char *argv[])
     pthread_barrier_destroy(&barrier);
     free(args);
     free(children);
+    return 0;
 }
 
 void *child(void *params)

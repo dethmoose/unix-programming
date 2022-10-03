@@ -7,15 +7,14 @@
 #include <unistd.h>
 #include <errno.h>
 
-// TODO popen() instead of system()
-// TODO zombie processes
 // TODO Handle arguments for kmeans and matinv
 // TODO Send output file to client (or just filename and data and then client creates file)
 
 // Default values
 int port = -1;
 int d = 0;
-char *strat = "fork";
+enum Strategy{FORK, MUXBASIC, MUXSCALE};
+enum Strategy strat = FORK; // Fork strategy as default.
 
 int usage();
 void read_options(int argc, char *argv[]);
@@ -29,9 +28,18 @@ int client_num = 0, solution_num = 0;
 
 int main(int argc, char *argv[])
 {
+
     if (argc < 2)
         usage();
     read_options(argc, argv);
+    
+    if (d) {
+        // TODO
+        printf("Running as daemon\n");
+        printf("PID: %d\n", getpid());
+    }
+
+    printf("Strategy: %d\n", strat);
     // printf("Port number: %d, daemon: %d, strategy: %s\n", port, d, strat);
 
     signal(SIGPIPE, SIG_IGN);
@@ -127,55 +135,67 @@ int main(int argc, char *argv[])
     return 0;
 }
 
+// TODO: For grade C 
+// void run_as_daemon(){
+
+// }
+
+// void run_with_fork(){
+
+// }
+
+// TODO: For grade B, "-s muxbasic"
+// void run_with_muxbasic(){
+
+// }
+
+// TODO: For grade A, "-s muxscale"
+// void run_with_muxscale() {
+
+// }
+
 void read_options(int argc, char *argv[])
 {
     char *prog;
     prog = *argv;
 
-    while (++argv, --argc > 0)
+    int i = 1;
+    for (i; i < argc; i++)
     {
-        if (**argv == '-')
-        {
-            switch (*++*argv)
+        if (argv[i][0] == '-') {
+            switch (argv[i][1]) 
             {
             case 'd':
-                --argc;
-                d = atoi(*++argv);
+                d = 1;
                 break;
-
             case 'p':
-                --argc;
-                port = atoi(*++argv);
+                port = atoi(argv[++i]);
                 break;
-
             case 's':
-                --argc;
-                strat = *++argv;
+                if (strcmp(argv[i+1], "fork") == 0){
+                    strat = FORK;
+                }
+                else if (strcmp(argv[i+1], "muxbasic") == 0){
+                    strat = MUXBASIC;
+                }
+                else if (strcmp(argv[i+1], "muxscale") == 0){
+                    strat = MUXSCALE;
+                }
+                else {
+                    printf("%s: ignored option: -%s\n", prog, argv[i]);
+                }
+                i++;
                 break;
-
             case 'h':
             case 'u':
                 usage();
                 break;
 
             default:
-                printf("%s: ignored option: -%s\n", prog, *argv);
                 printf("HELP: try %s -h \n\n", prog);
                 break;
             }
         }
-    }
-
-    if (!(strat == "fork" || strat == "muxbasic" || strat == "muxscale"))
-    {
-        printf("Ignoring -s %s\n", strat);
-        strat = "fork";
-    }
-
-    if (!(d == 0 || d == 1))
-    {
-        printf("Ignoring -d %d\n", d);
-        d = 0;
     }
 }
 

@@ -6,7 +6,7 @@
 #include <fcntl.h>
 
 // TODO: use IP address
-
+// TODO: kmeans send data to server with -f filename option
 // Default values
 int port = -1;
 char *ip = "";
@@ -46,20 +46,21 @@ int main(int argc, char *argv[])
             perror("Error sending command.\n");
         }
 
+        // Recieve filename from server.
         recv(server_socket, strData, sizeof(strData), 0); 
         printf("Received the solution: %s\n", strData);
-
-        // parse filename, file content
-        char recvbuf[255] = "";
-        memset(recvbuf, 0, sizeof(recvbuf));
+        char filename[60] = "../computed_results/";
+        strcat(filename, strData);
 
         // Open file with append. "a" functions as if calling open with O_CREAT | O_WRONLY | O_APPEND
-        FILE* fp = fopen(strData, "a");
+        FILE* fp = fopen(filename, "a");
         if (fp == NULL) {
             printf("Error opening file.\n");
             exit(1); // Exit here?
         }
 
+        char recvbuf[255] = "";
+        memset(recvbuf, 0, sizeof(recvbuf));
         int recv_bytes; // How many bytes are recieved by call to recv().
         while(1) {
             if ((recv_bytes = recv(server_socket, recvbuf, sizeof(recvbuf), 0)) == -1 ) {
@@ -76,36 +77,34 @@ int main(int argc, char *argv[])
     exit(0);
 }
 
+
 void read_options(int argc, char *argv[])
 {
     char *prog;
     prog = *argv;
 
-    while (++argv, --argc > 0)
+    int i = 1;
+    for (i; i < argc; i++)
     {
-        if (**argv == '-')
-        {
-            switch (*++*argv)
+        if (argv[i][0] == '-') {
+            printf("Checking\n");
+            switch (argv[i][1]) 
             {
-            case 'i':
-                --argc;
-                ip = *++argv;
-                break;
-
-            case 'p':
-                --argc;
-                port = atoi(*++argv);
-                break;
-
-            case 'h':
-            case 'u':
-                usage();
-                break;
-
-            default:
-                printf("%s: ignored option: -%s\n", prog, *argv);
-                printf("HELP: try %s -h \n\n", prog);
-                break;
+                case 'i':
+                    ip = argv[++i];
+                    printf(ip);
+                    break;
+                case 'p':
+                    port = atoi(argv[++i]);
+                    break;
+                case 'h':
+                case 'u':
+                    usage();
+                    break;
+                default:
+                    printf("%s: ignored option: -%s\n", prog, argv[i]);
+                    printf("HELP: try %s -h \n\n", prog);
+                    break;
             }
         }
     }
