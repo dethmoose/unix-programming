@@ -55,7 +55,7 @@ int main(int argc, char *argv[])
     server_address.sin_port = htons(port);
     server_address.sin_addr.s_addr = INADDR_ANY;
 
-    if ((bind(server_socket, (struct sockaddr *)&server_address, sizeof(server_address)) != 0) {
+    if ((bind(server_socket, (struct sockaddr *)&server_address, sizeof(server_address))) != 0) {
         printf("Socket bind failed.\n");
         exit(1);
     }

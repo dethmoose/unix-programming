@@ -3,7 +3,8 @@ all:
 	gcc -w -O2 ./src/client.c -o client
 	gcc -w -O2 -lpthread ./src/server.c -o server
 	gcc -w -O2 -pthread ./src/matinv-par.c -o matinv
-	gcc -w -O2 -lpthread ./src/kmeans-par.c -o kmeans
+# Undersäl pthread v lpthread, får en massa undefined references med lpthread
+	gcc -w -O2 -pthread ./src/kmeans-par.c -o kmeans 
 	
 client:
 	gcc -w -O2 ./src/client.c -o client 
