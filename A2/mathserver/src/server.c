@@ -11,7 +11,7 @@
 // TODO Send output file to client (or just filename and data and then client creates file)
 
 // Default values
-int port = -1;
+int port = 1337;
 int d = 0;
 enum Strategy{FORK, MUXBASIC, MUXSCALE};
 enum Strategy strat = FORK; // Fork strategy as default.
@@ -45,14 +45,25 @@ int main(int argc, char *argv[])
     signal(SIGPIPE, SIG_IGN);
     signal(SIGCHLD, SIG_IGN);
     int server_socket = socket(AF_INET, SOCK_STREAM, 0);
+    if (server_socket == -1) {
+        printf("Socket creation failed.\n");
+        exit(1);
+    }
 
     struct sockaddr_in server_address;
     server_address.sin_family = AF_INET;
-    server_address.sin_port = port;
+    server_address.sin_port = htons(port);
     server_address.sin_addr.s_addr = INADDR_ANY;
 
-    bind(server_socket, (struct sockaddr *)&server_address, sizeof(server_address));
-    listen(server_socket, 1);
+    if ((bind(server_socket, (struct sockaddr *)&server_address, sizeof(server_address)) != 0) {
+        printf("Socket bind failed.\n");
+        exit(1);
+    }
+
+    if ((listen(server_socket, 1)) != 0){
+        printf("Listen to socket failed.\n");
+        exit(1);
+    }
     printf("Listening for clients...\n");
 
     int client_socket;

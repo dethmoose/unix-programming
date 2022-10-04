@@ -7,8 +7,10 @@
 
 // TODO: use IP address
 // TODO: kmeans send data to server with -f filename option
-// Default values
-int port = -1;
+
+// Flags and default values.
+int port = 1337;
+int ip_f = 0;
 char *ip = "";
 
 int usage();
@@ -16,17 +18,23 @@ void read_options(int argc, char *argv[]);
 
 int main(int argc, char *argv[])
 {
-    if (argc < 2) // ip address optional?
+    if (argc < 2)
         usage();
     read_options(argc, argv);
-    // printf("Port number: %d, ip address: %s\n", port, ip);
 
     int server_socket = socket(AF_INET, SOCK_STREAM, 0);
+    if (server_socket == -1) {
+        printf("Socket creation failed.\n");
+        exit(1);
+    }
 
     struct sockaddr_in server_address;
     server_address.sin_family = AF_INET;
-    server_address.sin_port = port;
-    server_address.sin_addr.s_addr = INADDR_ANY;
+    server_address.sin_port = htons(port);
+    if (ip_f)
+        server_address.sin_addr.s_addr = inet_addr(ip);
+    else 
+        server_address.sin_addr.s_addr = INADDR_ANY;
 
     int connect_status = connect(server_socket, (struct sockaddr *)&server_address, sizeof(server_address));
 
@@ -92,7 +100,7 @@ void read_options(int argc, char *argv[])
             {
                 case 'i':
                     ip = argv[++i];
-                    printf(ip);
+                    ip_f = 1;
                     break;
                 case 'p':
                     port = atoi(argv[++i]);
