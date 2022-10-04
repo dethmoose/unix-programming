@@ -8,10 +8,12 @@
 #define MAX_POINTS 4096
 #define MAX_CLUSTERS 32
 
+pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_barrier_t barrier;
 struct threadArgs
 {
     unsigned int id;
+    unsigned int iter;
 };
 
 typedef struct point
@@ -21,26 +23,24 @@ typedef struct point
     int cluster; // The cluster that the point belongs to
 } point;
 
-int THREADS = 10;
-int N = 0;                   // number of entries in the data
-int k = 0;                   // number of centroids
+int N = 1797;                // number of entries in the data
+int k = 9;                   // number of centroids
 point data[MAX_POINTS];      // Data coordinates
 point cluster[MAX_CLUSTERS]; // The coordinates of each cluster center (also called centroid)
+char *filename = "./src/kmeans-data.txt";
+bool somechange = false;
 
 void *child(void *params);
 
 void read_data()
 {
-    N = 1797;
-    k = 9;
-
-    // TODO: paths to filenames correct?
-    FILE *fp = fopen("./src/kmeans-data.txt", "r");
+    FILE *fp = fopen(filename, "r");
     if (fp == NULL)
     {
-        perror("read_data: Cannot open the file kmeans-data.txt");
+        perror("Cannot open file");
         exit(EXIT_FAILURE);
     }
+    // TODO: N depends on number of entries in the input data file
 
     // Initialize points from the data file
     // float temp = 0.0;
@@ -61,17 +61,51 @@ void read_data()
     fclose(fp);
 }
 
-int get_closest_centroid(int i, int k)
+int read_options(int argc, char *argv[])
 {
+    char *prog;
+    prog = *argv;
+
+    while (++argv, --argc > 0)
+    {
+        if (**argv == '-')
+        {
+            switch (*++*argv)
+            {
+            case 'f':
+                --argc;
+                filename = *++argv;
+                // TODO temp N value for "./src/kmeans-data-50.txt"
+                N = 50;
+                break;
+
+            case 'k':
+                --argc;
+                k = atoi(*++argv);
+                break;
+
+            default:
+                printf("%s: ignored option: -%s\n", prog, *argv);
+                break;
+            }
+        }
+    }
+    return 0;
+}
+
+int get_closest_centroid(int id, int k)
+{
+    // printf("get_closest_centroid %d\n", id);
     // find the nearest centroid
     int nearest_cluster = -1;
     double xdist, ydist, dist, min_dist;
     min_dist = dist = INT_MAX;
+
     for (int c = 0; c < k; c++)
     { // For each centroid
         // Calculate the square of the Euclidean distance between that centroid and the point
-        xdist = data[i].x - cluster[c].x;
-        ydist = data[i].y - cluster[c].y;
+        xdist = data[id].x - cluster[c].x;
+        ydist = data[id].y - cluster[c].y;
         dist = xdist * xdist + ydist * ydist; // The square of Euclidean distance
         // printf("%.2lf \n", dist);
         if (dist <= min_dist)
@@ -86,55 +120,46 @@ int get_closest_centroid(int i, int k)
 
 bool assign_cluster_to_point(int id)
 {
+    // printf("assign_cluster_to_point %d\n", id);
     bool something_changed = false;
     int old_cluster = -1, new_cluster = -1;
+
     old_cluster = data[id].cluster;
     new_cluster = get_closest_centroid(id, k);
-    data[id].cluster = new_cluster; // Assign a cluster to the point 'id'
+    data[id].cluster = new_cluster; // Assign a cluster to the point
     if (old_cluster != new_cluster)
     {
+        printf("assign_cluster_to_point %d, something changed\n", id);
         something_changed = true;
     }
-    
+
     return something_changed;
 }
 
-void update_cluster_centers()
+void update_cluster_centers(int id)
 {
+    // printf("update_cluster_centers %d\n", id);
     // Update the cluster centers
     int c = 0;
     int count[MAX_CLUSTERS] = {0}; // Array to keep track of the number of points in each cluster
     point temp[MAX_CLUSTERS] = {{0.0}};
 
-    for (int i = 0; i < N; i++)
-    {
-        c = data[i].cluster;
-        count[c]++;
-        temp[c].x += data[i].x;
-        temp[c].y += data[i].y;
-    }
-    for (int i = 0; i < k; i++)
-    {
-        cluster[i].x = temp[i].x / count[i];
-        cluster[i].y = temp[i].y / count[i];
-    }
-}
+    c = data[id].cluster;
+    count[c]++;
+    temp[c].x += data[id].x;
+    temp[c].y += data[id].y;
 
-// TODO parallelize
-int kmeans(int k)
-{
-    bool somechange;
-    int iter = 0;
-    do
+    pthread_barrier_wait(&barrier);
+
+    // only one thread updates clusters
+    if (id == 0)
     {
-        iter++; // Keep track of number of iterations
-        somechange = assign_cluster_to_point();
-        update_cluster_centers();
-        // pthread_barrier_wait(&barrier);
-    } while (somechange);
-    printf("Number of iterations taken = %d\n", iter);
-    printf("Computed cluster numbers successfully!\n");
-    return 0;
+        for (int i = 0; i < k; i++)
+        {
+            cluster[i].x = temp[i].x / count[i];
+            cluster[i].y = temp[i].y / count[i];
+        }
+    }
 }
 
 void write_results()
@@ -142,7 +167,7 @@ void write_results()
     FILE *fp = fopen("./../computed_results/kmeans-results.txt", "w");
     if (fp == NULL)
     {
-        perror("write_results: Cannot open the file kmeans-results.txt");
+        perror("Cannot write to file");
         exit(EXIT_FAILURE);
     }
     else
@@ -155,40 +180,56 @@ void write_results()
     printf("Wrote the results to a file!\n");
 }
 
-int main()
+int main(int argc, char *argv[])
 {
+    read_options(argc, argv);
     read_data();
+    printf("kmeans (k=%d, N=%d, file=%s)\n", k, N, filename);
 
-    // N threads probably not needed, N is number of data points
-    pthread_barrier_init(&barrier, NULL, THREADS);
+    // N threads
+    pthread_barrier_init(&barrier, NULL, N);
     pthread_t *children;     // dynamic array of child threads
     struct threadArgs *args; // argument buffer
 
-    children = malloc(THREADS * sizeof(pthread_t)); // allocate array of handles
-    args = malloc(THREADS * sizeof(struct threadArgs)); // args vector
+    children = malloc(N * sizeof(pthread_t));     // allocate array of handles
+    args = malloc(N * sizeof(struct threadArgs)); // args vector
 
-    for (int i = 0; i < THREADS; i++)
+    for (int i = 0; i < N; i++)
     {
         args[i].id = i;
+        args[i].iter = 0;
         pthread_create(&(children[i]),    // our handle for the child
                        NULL,              // attributes of the child
                        child,             // the function it should run
                        (void *)&args[i]); // args to that function
     }
-     // kmeans(k);
 
     // wait for all threads to complete
-    for (int j = 0; j < THREADS; j++)
+    for (int j = 0; j < N; j++)
     {
         pthread_join(children[j], NULL);
     }
+
     write_results();
 
-    pthread_barrier_destroy(&barrier);
+    // print number of iterations
+    int iter = 0;
+    for (int k = 0; k < N; k++)
+    {
+        if (args[k].iter > iter)
+        {
+            iter = args[k].iter;
+        }
+    }
+    printf("Number of iterations taken = %d\n", iter);
+    printf("Computed cluster numbers successfully!\n");
+
     free(args);
     free(children);
+    pthread_mutex_destroy(&lock);
+    pthread_barrier_destroy(&barrier);
+
     return 0;
-    
 }
 
 void *child(void *params)
@@ -196,6 +237,7 @@ void *child(void *params)
     struct threadArgs *args = (struct threadArgs *)params;
     int id = args->id;
 
-    // do something
-    // pthread_barrier_wait(&barrier);
+    printf("Hello from thread %d\n", id);
+    args->iter = 1;
+    return NULL;
 }

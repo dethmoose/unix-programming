@@ -14,21 +14,18 @@ typedef struct point
     int cluster; // The cluster that the point belongs to
 } point;
 
-int N = 0;                   // number of entries in the data
-int k = 0;                   // number of centroids
+int N = 1797;                // number of entries in the data
+int k = 9;                   // number of centroids
 point data[MAX_POINTS];      // Data coordinates
 point cluster[MAX_CLUSTERS]; // The coordinates of each cluster center (also called centroid)
+char *filename = "./src/kmeans-data.txt";
 
 void read_data()
 {
-    N = 1797;
-    k = 9;
-
-    // TODO: paths to filenames correct?
-    FILE *fp = fopen("./src/kmeans-data.txt", "r");
+    FILE *fp = fopen(filename, "r");
     if (fp == NULL)
     {
-        perror("read_data: Cannot open the file kmeans-data.txt");
+        perror("Cannot open file");
         exit(EXIT_FAILURE);
     }
 
@@ -49,6 +46,32 @@ void read_data()
         cluster[i].y = data[r].y;
     }
     fclose(fp);
+}
+
+int read_options(int argc, char *argv[])
+{
+    char *prog;
+    prog = *argv;
+
+    while (++argv, --argc > 0)
+    {
+        if (**argv == '-')
+        {
+            switch (*++*argv)
+            {
+            case 'f':
+                --argc;
+                filename = *++argv;
+                N = 50; // TODO temp N value for "./src/kmeans-data-50.txt"
+                break;
+
+            default:
+                printf("%s: ignored option: -%s\n", prog, *argv);
+                break;
+            }
+        }
+    }
+    return 0;
 }
 
 int get_closest_centroid(int i, int k)
@@ -132,7 +155,7 @@ void write_results()
     FILE *fp = fopen("./../computed_results/kmeans-results.txt", "w");
     if (fp == NULL)
     {
-        perror("write_results: Cannot open the file kmeans-results.txt");
+        perror("Cannot open file");
         exit(EXIT_FAILURE);
     }
     else
@@ -145,8 +168,9 @@ void write_results()
     printf("Wrote the results to a file!\n");
 }
 
-int main()
+int main(int argc, char *argv[])
 {
+    read_options(argc, argv);
     read_data();
     kmeans(k);
     write_results();
