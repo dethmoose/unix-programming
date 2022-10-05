@@ -5,8 +5,8 @@
 #include <errno.h>
 #include <fcntl.h>
 
-// TODO: use IP address, try localhost and make sure client connects
 // TODO: kmeans send data to server with -f filename option
+// TODO: when running on separate machines, make sure output files get the correct data
 
 // Flags and default values.
 int port = 1337;
@@ -103,7 +103,7 @@ void read_options(int argc, char *argv[])
     {
         if (argv[i][0] == '-')
         {
-            printf("Checking\n");
+            // printf("Checking\n");
             switch (argv[i][1])
             {
             case 'i':

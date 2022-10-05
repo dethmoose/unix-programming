@@ -8,7 +8,6 @@
 #include <errno.h>
 
 // TODO Handle arguments for kmeans and matinv
-// TODO Send output file to client (or just filename and data and then client creates file)
 
 // TODO email Sai about if kmeans write_output can be changed to either write to stdout or take option for output filename, so that concurrent clients files won't get overwritten in the servers computed_results/ folder
 // - why is there a difference in how matrix_inverse.c and kmeans.c writes output?
@@ -132,7 +131,7 @@ int main(int argc, char *argv[])
                 FILE *fp = popen(command, "r");
                 while (fgets(output, sizeof(output), fp) != NULL)
                 {
-                    printf(output);
+                    // printf(output);
                     if ((send(client_socket, output, strlen(output), 0)) == -1)
                     {
                         perror("Error sending command output.\n");
