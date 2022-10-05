@@ -10,6 +10,9 @@
 // TODO Handle arguments for kmeans and matinv
 // TODO Send output file to client (or just filename and data and then client creates file)
 
+// TODO email Sai about if kmeans write_output can be changed to either write to stdout or take option for output filename, so that concurrent clients files won't get overwritten in the servers computed_results/ folder
+// - why is there a difference in how matrix_inverse.c and kmeans.c writes output?
+
 // Default values
 int port = 1337;
 int d = 0;
@@ -32,8 +35,9 @@ int main(int argc, char *argv[])
     if (argc < 2)
         usage();
     read_options(argc, argv);
-    
-    if (d) {
+
+    if (d)
+    {
         // TODO
         printf("Running as daemon\n");
         printf("PID: %d\n", getpid());
@@ -45,7 +49,8 @@ int main(int argc, char *argv[])
     signal(SIGPIPE, SIG_IGN);
     signal(SIGCHLD, SIG_IGN);
     int server_socket = socket(AF_INET, SOCK_STREAM, 0);
-    if (server_socket == -1) {
+    if (server_socket == -1)
+    {
         printf("Socket creation failed.\n");
         exit(1);
     }
@@ -55,12 +60,14 @@ int main(int argc, char *argv[])
     server_address.sin_port = htons(port);
     server_address.sin_addr.s_addr = INADDR_ANY;
 
-    if ((bind(server_socket, (struct sockaddr *)&server_address, sizeof(server_address))) != 0) {
+    if ((bind(server_socket, (struct sockaddr *)&server_address, sizeof(server_address))) != 0)
+    {
         printf("Socket bind failed.\n");
         exit(1);
     }
 
-    if ((listen(server_socket, 1)) != 0){
+    if ((listen(server_socket, 1)) != 0)
+    {
         printf("Listen to socket failed.\n");
         exit(1);
     }
@@ -96,7 +103,7 @@ int main(int argc, char *argv[])
 
                 char cmd[7];
                 // cmd = validate_command(msg); // TODO validate function
-
+                // start recieving client data for kmeans. save as filename kmeans-results_clientnum_solnum.txt
                 // validate command
                 snprintf(cmd, sizeof(cmd), "%.6s", msg); // 6 first chars
 
@@ -114,39 +121,37 @@ int main(int argc, char *argv[])
                 printf("Sending solution: %s\n", data);
                 send(client_socket, data, strlen(data) + 1, 0);
 
-                
-                char command[30] = "./";
-                strcat(command, cmd);
+                char command[255] = "./";
+                strcat(command, msg);
 
                 // Start program. Different functions for kmeans and matinv?
                 // Might be necessary to get the results from kmeans? matinv prints to stdout.
                 char output[255] = "";
                 memset(output, 0, sizeof(output));
 
-                FILE* fp = popen(command, "r");
-                while (fgets(output, sizeof(output), fp) != NULL) 
+                FILE *fp = popen(command, "r");
+                while (fgets(output, sizeof(output), fp) != NULL)
                 {
                     printf(output);
-                    if ((send(client_socket, output, strlen(output), 0)) == -1) {
+                    if ((send(client_socket, output, strlen(output), 0)) == -1)
+                    {
                         perror("Error sending command output.\n");
                     }
                     memset(output, 0, sizeof(output));
                 }
                 pclose(fp);
 
-                if ((send(client_socket, "\nOutput End\n", strlen("\nOutput End\n"), 0)) == -1) {
+                if ((send(client_socket, "\nOutput End\n", strlen("\nOutput End\n"), 0)) == -1)
+                {
                     printf(errno);
                 }
-
-
-                
             }
         }
     }
     return 0;
 }
 
-// TODO: For grade C 
+// TODO: For grade C
 // void run_as_daemon(){
 
 // }
@@ -173,8 +178,9 @@ void read_options(int argc, char *argv[])
     int i = 1;
     for (i; i < argc; i++)
     {
-        if (argv[i][0] == '-') {
-            switch (argv[i][1]) 
+        if (argv[i][0] == '-')
+        {
+            switch (argv[i][1])
             {
             case 'd':
                 d = 1;
@@ -183,16 +189,20 @@ void read_options(int argc, char *argv[])
                 port = atoi(argv[++i]);
                 break;
             case 's':
-                if (strcmp(argv[i+1], "fork") == 0){
+                if (strcmp(argv[i + 1], "fork") == 0)
+                {
                     strat = FORK;
                 }
-                else if (strcmp(argv[i+1], "muxbasic") == 0){
+                else if (strcmp(argv[i + 1], "muxbasic") == 0)
+                {
                     strat = MUXBASIC;
                 }
-                else if (strcmp(argv[i+1], "muxscale") == 0){
+                else if (strcmp(argv[i + 1], "muxscale") == 0)
+                {
                     strat = MUXSCALE;
                 }
-                else {
+                else
+                {
                     printf("%s: ignored option: -%s\n", prog, argv[i]);
                 }
                 i++;
