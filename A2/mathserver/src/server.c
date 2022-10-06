@@ -1,11 +1,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/resource.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/time.h>
 #include <netinet/in.h>
 #include <signal.h>
 #include <unistd.h>
 #include <errno.h>
+#include <fcntl.h>
 
 // TODO Handle arguments for kmeans and matinv
 
@@ -30,20 +34,9 @@ int client_num = 0, solution_num = 0;
 
 int main(int argc, char *argv[])
 {
-
-    if (argc < 2)
-        usage();
     read_options(argc, argv);
-
-    if (d)
-    {
-        // TODO
-        printf("Running as daemon\n");
-        printf("PID: %d\n", getpid());
-    }
-
-    printf("Strategy: %d\n", strat);
-    // printf("Port number: %d, daemon: %d, strategy: %s\n", port, d, strat);
+    // printf("Strategy: %d\n", strat);
+    printf("Port number: %d, daemon: %d, strategy: %d\n", port, d, strat);
 
     signal(SIGPIPE, SIG_IGN);
     signal(SIGCHLD, SIG_IGN);
@@ -72,8 +65,15 @@ int main(int argc, char *argv[])
     }
     printf("Listening for clients...\n");
 
-    int client_socket;
+    if (d)
+    {
+        // TODO where to call run_as_daemon in main?
+        printf("Running as daemon\n");
+        printf("PID: %d\n", getpid());
+        // run_as_daemon("mathserver"); // TODO comment out to test
+    }
 
+    int client_socket;
     while (client_socket = accept(server_socket, NULL, NULL), client_socket)
     {
         client_num++;
@@ -103,6 +103,7 @@ int main(int argc, char *argv[])
                 char cmd[7];
                 // cmd = validate_command(msg); // TODO validate function
                 // start recieving client data for kmeans. save as filename kmeans-results_clientnum_solnum.txt
+
                 // validate command
                 snprintf(cmd, sizeof(cmd), "%.6s", msg); // 6 first chars
 
@@ -123,7 +124,7 @@ int main(int argc, char *argv[])
                 char command[255] = "./";
                 strcat(command, msg);
 
-                // Start program. Different functions for kmeans and matinv?
+                // Start program.
                 // Might be necessary to get the results from kmeans? matinv prints to stdout.
                 char output[255] = "";
                 memset(output, 0, sizeof(output));
@@ -150,14 +151,83 @@ int main(int argc, char *argv[])
     return 0;
 }
 
+// void run_with_fork()
+// {
+
+// }
+
 // TODO: For grade C
-// void run_as_daemon(){
+void run_as_daemon(const char *process_name)
+{
+    int i, fd0, fd1, fd2;
+    pid_t pid;
+    struct rlimit rl;
+    struct sigaction sa;
 
-// }
+    /* STEP 1: Clear file creation mask */
+    umask(0);
 
-// void run_with_fork(){
+    /* Get maximum number of file descriptors */
+    if (getrlimit(RLIMIT_NOFILE, &rl) < 0)
+    {
+        perror(process_name);
+        exit(1);
+    }
 
-// }
+    /* STEP 2a: Fork a child process */
+    if ((pid = fork()) < 0)
+    {
+        perror(process_name);
+        exit(1);
+    }
+    else if (pid != 0)
+    { /* STEP 2b: Exit the parent process */
+        exit(0);
+    }
+    /* STEP 3: Become a session leader to lose controlling TTY
+     * The child process executes this! */
+    setsid();
+
+    /* Ensure future opens won't allocate controlling TTYs */
+    sa.sa_handler = SIG_IGN;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    if (sigaction(SIGHUP, &sa, NULL) < 0)
+    {
+        perror("Can't ignore SIGHUP");
+        exit(1);
+    }
+    if ((pid = fork()) < 0)
+    {
+        perror("Can't fork");
+        exit(1);
+    }
+    else if (pid != 0) /* parent */
+        exit(0);
+
+    /*
+     * Change the current working directory to the root so
+     * we won't prevent file systems from being unmounted. */
+    if (chdir("/") < 0)
+    {
+        perror("Can't change to /");
+        exit(1);
+    }
+
+    /* Close all open file descriptors */
+    printf("limit: %ld\n", rl.rlim_max);
+    if (rl.rlim_max == RLIM_INFINITY)
+        rl.rlim_max = 1024;
+    for (i = 0; i < rl.rlim_max; i++)
+        close(i);
+
+    /* Attach file descriptors 0, 1, and 2 to /dev/null */
+    fd0 = open("/dev/null", O_RDWR);
+    fd1 = dup(0);
+    fd2 = dup(0);
+
+    // Check fd0,fd1,fd2 for errors?
+}
 
 // TODO: For grade B, "-s muxbasic"
 // void run_with_muxbasic(){
@@ -171,7 +241,10 @@ int main(int argc, char *argv[])
 
 void read_options(int argc, char *argv[])
 {
-    char *prog;
+    if (argc < 2)
+        usage();
+
+    char *prog, *value;
     prog = *argv;
 
     int i = 1;
@@ -182,21 +255,26 @@ void read_options(int argc, char *argv[])
             switch (argv[i][1])
             {
             case 'd':
-                d = 1;
+                value = argv[++i];
+                if (strcmp(value, "1") == 0)
+                {
+                    d = 1;
+                }
                 break;
             case 'p':
                 port = atoi(argv[++i]);
                 break;
             case 's':
-                if (strcmp(argv[i + 1], "fork") == 0)
+                value = argv[++i];
+                if (strcmp(value, "fork") == 0)
                 {
                     strat = FORK;
                 }
-                else if (strcmp(argv[i + 1], "muxbasic") == 0)
+                else if (strcmp(value, "muxbasic") == 0)
                 {
                     strat = MUXBASIC;
                 }
-                else if (strcmp(argv[i + 1], "muxscale") == 0)
+                else if (strcmp(value, "muxscale") == 0)
                 {
                     strat = MUXSCALE;
                 }
@@ -212,6 +290,7 @@ void read_options(int argc, char *argv[])
                 break;
 
             default:
+                printf("%s: ignored option: -%s\n", prog, *argv);
                 printf("HELP: try %s -h \n\n", prog);
                 break;
             }
