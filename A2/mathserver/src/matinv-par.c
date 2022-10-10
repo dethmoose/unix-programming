@@ -151,7 +151,7 @@ void init_matrix()
         }
     }
 
-    if (strcmp(Init, "fast") == 0) // TODO: else if?
+    if (strcmp(Init, "fast") == 0)
     {
         for (row = 0; row < N; row++)
         {

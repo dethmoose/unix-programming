@@ -222,7 +222,7 @@ int main(int argc, char *argv[])
         }
     }
     printf("Number of iterations taken = %d\n", iter);
-    printf("Computed cluster numbers successfully!\n");
+    // printf("Computed cluster numbers successfully!\n");
 
     free(args);
     free(children);
@@ -236,8 +236,6 @@ void *child(void *params)
 {
     struct threadArgs *args = (struct threadArgs *)params;
     int id = args->id;
-
-    printf("Hello from thread %d\n", id);
     args->iter = 1;
     return NULL;
 }
