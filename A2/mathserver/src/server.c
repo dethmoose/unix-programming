@@ -5,6 +5,7 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/time.h>
+#include <syslog.h> // LOG_CONS, LOG_DAEMON, LOG_ERR
 #include <netinet/in.h>
 #include <signal.h>
 #include <unistd.h>
@@ -13,8 +14,7 @@
 
 // TODO Handle arguments for kmeans and matinv
 
-// TODO email Sai about if kmeans write_output can be changed to either write to stdout or take option for output filename, so that concurrent clients files won't get overwritten in the servers computed_results/ folder
-// - why is there a difference in how matrix_inverse.c and kmeans.c writes output?
+// TODO result files are empty when running as daemon
 
 // Default values
 int port = 1337;
@@ -36,7 +36,13 @@ int main(int argc, char *argv[])
 {
     read_options(argc, argv);
     // printf("Strategy: %d\n", strat);
-    printf("Port number: %d, daemon: %d, strategy: %d\n", port, d, strat);
+    // printf("Port number: %d, daemon: %d, strategy: %d\n", port, d, strat);
+
+    if (d)
+    {
+        printf("Running as daemon\n");
+        run_as_daemon("server");
+    }
 
     signal(SIGPIPE, SIG_IGN);
     signal(SIGCHLD, SIG_IGN);
@@ -65,24 +71,16 @@ int main(int argc, char *argv[])
     }
     printf("Listening for clients...\n");
 
-    if (d)
-    {
-        // TODO where to call run_as_daemon in main?
-        printf("Running as daemon\n");
-        printf("PID: %d\n", getpid());
-        // run_as_daemon("mathserver"); // TODO comment out to test
-    }
-
     int client_socket;
     while (client_socket = accept(server_socket, NULL, NULL), client_socket)
     {
         client_num++;
         pid_t pid = fork();
+        // printf("PID: %d\n", getpid());
+
         if (pid == 0) // child process
         {
             printf("Connected with client %d\n", client_num);
-            // int thispid = getpid();
-            // printf("pid: %d\n", thispid);
             solution_num = 0;
 
             while (1)
@@ -156,7 +154,7 @@ int main(int argc, char *argv[])
 
 // }
 
-// TODO: For grade C
+// Code by Advanced Programming in the UNIX® Environment: Second Edition - Stevens & Rago
 void run_as_daemon(const char *process_name)
 {
     int i, fd0, fd1, fd2;
@@ -197,6 +195,7 @@ void run_as_daemon(const char *process_name)
         perror("Can't ignore SIGHUP");
         exit(1);
     }
+
     if ((pid = fork()) < 0)
     {
         perror("Can't fork");
@@ -205,8 +204,7 @@ void run_as_daemon(const char *process_name)
     else if (pid != 0) /* parent */
         exit(0);
 
-    /*
-     * Change the current working directory to the root so
+    /* Change the current working directory to the root so
      * we won't prevent file systems from being unmounted. */
     if (chdir("/") < 0)
     {
@@ -226,7 +224,14 @@ void run_as_daemon(const char *process_name)
     fd1 = dup(0);
     fd2 = dup(0);
 
-    // Check fd0,fd1,fd2 for errors?
+    /* Initialize the log file. */
+    openlog(process_name, LOG_CONS, LOG_DAEMON);
+    if (fd0 != 0 || fd1 != 1 || fd2 != 2)
+    {
+        syslog(LOG_ERR, "unexpected file descriptors %d %d %d",
+               fd0, fd1, fd2);
+        exit(1);
+    }
 }
 
 // TODO: For grade B, "-s muxbasic"
