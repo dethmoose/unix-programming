@@ -13,7 +13,6 @@
 #include <fcntl.h>
 
 // TODO Handle arguments for kmeans and matinv
-
 // TODO result files are empty when running as daemon
 
 // Default values
@@ -130,7 +129,7 @@ int main(int argc, char *argv[])
                 FILE *fp = popen(command, "r");
                 while (fgets(output, sizeof(output), fp) != NULL)
                 {
-                    // printf(output);
+                    printf(output); // TODO debug print server
                     if ((send(client_socket, output, strlen(output), 0)) == -1)
                     {
                         perror("Error sending command output.\n");
