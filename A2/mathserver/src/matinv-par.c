@@ -235,12 +235,12 @@ int read_options(int argc, char *argv[])
                 printf("\n          Init      = rand");
                 printf("\n          maxnum    = 5 ");
                 printf("\n          P         = 0 \n\n");
-                exit(0);
+                exit(EXIT_SUCCESS);
                 break;
 
             case 'h':
                 printf("\nHELP: try matinv -u \n\n");
-                exit(0);
+                exit(EXIT_SUCCESS);
                 break;
 
             case 'u':
@@ -250,7 +250,7 @@ int read_options(int argc, char *argv[])
                 printf("           [-I init_type] fast/rand \n");
                 printf("           [-m maxnum] max random no \n");
                 printf("           [-P print_switch] 0/1 \n");
-                exit(0);
+                exit(EXIT_SUCCESS);
                 break;
 
             default:

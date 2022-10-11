@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
     if (server_socket == -1)
     {
         printf("Socket creation failed.\n");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     struct sockaddr_in server_address;
@@ -60,13 +60,13 @@ int main(int argc, char *argv[])
     if ((bind(server_socket, (struct sockaddr *)&server_address, sizeof(server_address))) != 0)
     {
         printf("Socket bind failed.\n");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     if ((listen(server_socket, 1)) != 0)
     {
         printf("Listen to socket failed.\n");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
     printf("Listening for clients...\n");
 
@@ -92,7 +92,7 @@ int main(int argc, char *argv[])
                 {
                     printf("Closing socket\n");
                     close(client_socket);
-                    exit(0);
+                    exit(EXIT_SUCCESS);
                 }
 
                 printf("Client %d commanded: %s\n", client_num, msg);
@@ -109,7 +109,7 @@ int main(int argc, char *argv[])
                     char error[] = "Error! Valid commands: 'matinv' or 'kmeans'";
                     send(client_socket, error, sizeof(error), 0);
                     close(client_socket);
-                    exit(0);
+                    exit(EXIT_SUCCESS);
                 }
 
                 // Generate filename
@@ -168,18 +168,18 @@ void run_as_daemon(const char *process_name)
     if (getrlimit(RLIMIT_NOFILE, &rl) < 0)
     {
         perror(process_name);
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     /* STEP 2a: Fork a child process */
     if ((pid = fork()) < 0)
     {
         perror(process_name);
-        exit(1);
+        exit(EXIT_FAILURE);
     }
     else if (pid != 0)
     { /* STEP 2b: Exit the parent process */
-        exit(0);
+        exit(EXIT_SUCCESS);
     }
     /* STEP 3: Become a session leader to lose controlling TTY
      * The child process executes this! */
@@ -192,23 +192,23 @@ void run_as_daemon(const char *process_name)
     if (sigaction(SIGHUP, &sa, NULL) < 0)
     {
         perror("Can't ignore SIGHUP");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     if ((pid = fork()) < 0)
     {
         perror("Can't fork");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
     else if (pid != 0) /* parent */
-        exit(0);
+        exit(EXIT_SUCCESS);
 
     /* Change the current working directory to the root so
      * we won't prevent file systems from being unmounted. */
     if (chdir("/") < 0)
     {
         perror("Can't change to /");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     /* Close all open file descriptors */
@@ -229,7 +229,7 @@ void run_as_daemon(const char *process_name)
     {
         syslog(LOG_ERR, "unexpected file descriptors %d %d %d",
                fd0, fd1, fd2);
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 }
 
@@ -308,7 +308,7 @@ int usage()
     printf("              [-d]            run as daemon (0/1)\n");
     printf("              [-s strategy]   specify the request handling strategy (fork/muxbasic/muxscale)\n");
     printf("              [-h]            help\n");
-    exit(1);
+    exit(EXIT_FAILURE);
 }
 
 // could not get this to work as a function
