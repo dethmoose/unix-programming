@@ -60,6 +60,46 @@ int main(int argc, char *argv[])
     return 0;
 }
 
+void kmeans_run(int sockfd, char msg[])
+{
+
+}
+
+void matinv_run(int sockfd, char msg[])
+{
+    // Append file separator to path.
+    char delimiter = '/';
+
+    char command[1024];
+    strncpy(command, cwd, sizeof(command));
+    strncat(command, &delimiter, 1);
+    strcat(command, msg);
+
+    // Start program.
+    // Might be necessary to get the results from kmeans? matinv prints to stdout.
+    char output[255] = "";
+    memset(output, 0, sizeof(output));
+
+    // I just realized that giving popen direct user input is super unsafe, but this isn't a course on infosec so... Don't abuse?
+    FILE *fp = popen(command, "r");
+    while (fgets(output, sizeof(output), fp) != NULL)
+    {
+        // printf(output);
+        if ((send(sockfd, output, strlen(output), 0)) == -1)
+        {
+            perror("Error sending command output.\n");
+        }
+        memset(output, 0, sizeof(output));
+    }
+    pclose(fp);
+
+    if ((send(sockfd, "\nOutput End\n", strlen("\nOutput End\n"), 0)) == -1)
+    {
+        printf(errno);
+    }
+
+}
+
 void run_with_fork()
 {
     signal(SIGPIPE, SIG_IGN);
@@ -137,35 +177,15 @@ void run_with_fork()
                 printf("Sending solution: %s\n", data);
                 send(client_socket, data, strlen(data) + 1, 0);
 
-                // Append file separator to path.
-                char delimiter = '/';
-
-                char command[1024];
-                strncpy(command, cwd, sizeof(command));
-                strncat(command, &delimiter, 1);
-                strcat(command, msg);
-
-                // Start program.
-                // Might be necessary to get the results from kmeans? matinv prints to stdout.
-                char output[255] = "";
-                memset(output, 0, sizeof(output));
-
-                // I just realized that giving popen direct user input is super unsafe, but this isn't a course on infosec so... Don't abuse?
-                FILE *fp = popen(command, "r");
-                while (fgets(output, sizeof(output), fp) != NULL)
+                // TODO: 
+                // Here, either run kmeans_run or matinv_run based on msg.
+                if (strcmp(cmd, "kmeans") == 0)
                 {
-                    // printf(output);
-                    if ((send(client_socket, output, strlen(output), 0)) == -1)
-                    {
-                        perror("Error sending command output.\n");
-                    }
-                    memset(output, 0, sizeof(output));
+                    kmeans_run(client_socket, msg);
                 }
-                pclose(fp);
-
-                if ((send(client_socket, "\nOutput End\n", strlen("\nOutput End\n"), 0)) == -1)
+                else if (strcmp(cmd, "matinv") == 0)
                 {
-                    printf(errno);
+                    matinv_run(client_socket, msg);
                 }
             }
         }
