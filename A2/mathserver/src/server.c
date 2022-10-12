@@ -14,8 +14,6 @@
 
 // TODO Handle arguments for kmeans and matinv
 
-// TODO result files are empty when running as daemon
-
 // Default values
 int port = 1337;
 int d = 0;
@@ -29,14 +27,18 @@ int execute_command(char command[], char program[], char data[], int size_d);
 
 // Filenames for output files, incrementing id
 int client_num = 0, solution_num = 0;
-// kmeans_client<i>_soln<j>.txt
-// matinv_client<i>_soln<j>.txt
+
+// declaring the command globally because most likely all of the functions will use this.
+char cwd[1024];
 
 int main(int argc, char *argv[])
 {
     read_options(argc, argv);
     // printf("Strategy: %d\n", strat);
     // printf("Port number: %d, daemon: %d, strategy: %d\n", port, d, strat);
+    
+    // Mostly useful becuse daemonizing the process will change working dir to root. Need to know the path to mathserver. 
+    getcwd(cwd, sizeof(cwd));
 
     if (d)
     {
@@ -44,6 +46,22 @@ int main(int argc, char *argv[])
         run_as_daemon("server");
     }
 
+    switch (strat) 
+    {
+        case FORK:
+            run_with_fork();
+            break;
+        case MUXBASIC:
+            break;
+        case MUXSCALE:
+            break;
+    }
+
+    return 0;
+}
+
+void run_with_fork()
+{
     signal(SIGPIPE, SIG_IGN);
     signal(SIGCHLD, SIG_IGN);
     int server_socket = socket(AF_INET, SOCK_STREAM, 0);
@@ -119,7 +137,12 @@ int main(int argc, char *argv[])
                 printf("Sending solution: %s\n", data);
                 send(client_socket, data, strlen(data) + 1, 0);
 
-                char command[255] = "./";
+                // Append file separator to path.
+                char delimiter = '/';
+
+                char command[1024];
+                strncpy(command, cwd, sizeof(command));
+                strncat(command, &delimiter, 1);
                 strcat(command, msg);
 
                 // Start program.
@@ -127,6 +150,7 @@ int main(int argc, char *argv[])
                 char output[255] = "";
                 memset(output, 0, sizeof(output));
 
+                // I just realized that giving popen direct user input is super unsafe, but this isn't a course on infosec so... Don't abuse?
                 FILE *fp = popen(command, "r");
                 while (fgets(output, sizeof(output), fp) != NULL)
                 {
@@ -146,13 +170,7 @@ int main(int argc, char *argv[])
             }
         }
     }
-    return 0;
 }
-
-// void run_with_fork()
-// {
-
-// }
 
 // Code by Advanced Programming in the UNIX® Environment: Second Edition - Stevens & Rago
 void run_as_daemon(const char *process_name)
@@ -260,11 +278,7 @@ void read_options(int argc, char *argv[])
             switch (argv[i][1])
             {
             case 'd':
-                value = argv[++i];
-                if (strcmp(value, "1") == 0)
-                {
-                    d = 1;
-                }
+                d = 1;
                 break;
             case 'p':
                 port = atoi(argv[++i]);
