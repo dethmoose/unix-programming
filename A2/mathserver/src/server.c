@@ -302,6 +302,7 @@ void run_as_daemon(const char *process_name)
 
 // TODO: For grade B, "-s muxbasic"
 void run_with_muxbasic(){
+    // TODO: Quits if client exits...
     int len, rc, on = 1;
     int listen_sock = -1;
     int new_sock = -1;
@@ -417,11 +418,15 @@ void run_with_muxbasic(){
                 // If we're in this else statement, it means this is not the listening socket.
                 printf("This descriptor is readable: %d\n", fds[i].fd);
                 close_conn = 0;
+                solution_num = 0;
 
                 do 
                 {
                     // Here we do the work we want to perform.
-                    rc = recv(fds[i].fd, buffer, sizeof(buffer), 0);
+                // ###############################
+                    solution_num++;
+                    char msg[255];
+                    rc = recv(fds[i].fd, msg, sizeof(msg), 0);
                     if (rc < 0) {
                         if (errno != EWOULDBLOCK) {
                             perror("Recv failed.\n");
@@ -430,22 +435,41 @@ void run_with_muxbasic(){
                         break;
                     }
 
-                    if (rc == 0) {
-                        printf("Connection closed.\n");
-                        close_conn = 1;
-                        break;
+                    printf("Client %d commanded: %s\n", client_num, msg);
+
+                    char cmd[7];
+                    // cmd = validate_command(msg); // TODO validate function
+                    // start recieving client data for kmeans. save as filename kmeans-results_clientnum_solnum.txt
+
+                    // validate command
+                    snprintf(cmd, sizeof(cmd), "%.6s", msg); // 6 first chars
+
+                    // Generate filename
+                    char data[30];
+                    snprintf(data, sizeof(data), "%s_client%d_soln%d.txt", cmd, client_num, solution_num);
+                    printf("Sending solution: %s\n", data);
+                    send(fds[i].fd, data, strlen(data) + 1, 0);
+
+                    // Append file separator to path.
+                    char delimiter = '/';
+
+                    char command[1024];
+                    strncpy(command, cwd, sizeof(command));
+                    strncat(command, &delimiter, 1);
+                    strcat(command, msg);
+
+                    // TODO: 
+                    // Here, either run kmeans_run or matinv_run based on msg.
+                    if (strcmp(cmd, "kmeans") == 0)
+                    {
+                        kmeans_run(fds[i].fd, command);
+                    }
+                    else if (strcmp(cmd, "matinv") == 0)
+                    {
+                        matinv_run(fds[i].fd, command);
                     }
 
-                    len = rc;
-                    printf("Recieved %d bytes.\n", len);
-
-                    rc = send(fds[i].fd, buffer, len, 0);
-                    if (rc < 0) {
-                        perror("Send failed.\n");
-                        close_conn = 1;
-                        break;
-                    }
-
+                // ###############################
                 } while (1);
 
                 if (close_conn) {
