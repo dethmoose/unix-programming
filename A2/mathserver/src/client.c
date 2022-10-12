@@ -50,7 +50,15 @@ int main(int argc, char *argv[])
         char strData[255];
         printf("Enter a command for the server: ");
         fgets(strData, 255, stdin);
-        strData[strlen(strData) - 1] = '\0'; // Remove newline from command
+        strData[strlen(strData) - 1] = '\0'; // Remove newline from command 
+
+        /* TODO:
+        Check here if the strData from input is either a kmeans or matinv command.
+        Reason is that the server sends an error message, but the client is actually 
+        waiting to recieve the information for the file to be created, and instead of a
+        proper filename, it instead opens a file called "Error: ..."
+        */
+       
         if ((send(server_socket, strData, strlen(strData) + 1, 0)) == -1)
         {
             perror("Error sending command.\n");

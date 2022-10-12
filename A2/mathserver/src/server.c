@@ -60,23 +60,39 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-void kmeans_run(int sockfd, char msg[])
+void kmeans_run(int sockfd, char command[])
 {
+    // Create the directory for client results
+    char path[1024];
+    strncpy(path, cwd, sizeof(path));
+    strncat(path, "/../computed_results/", sizeof(path));
+    char client[10];
+    snprintf(client, sizeof(client), "client%d", client_num);
+    strncat(path, client, sizeof(path));
+    
+    struct stat st = {0};
 
+    if (stat(path, &st) == -1) {
+        mkdir(path, 0666);
+    }
+
+    // pclose will block until the process opened by popen terminates.
+    FILE *fp = popen(command, "r");
+    pclose(fp);
+
+    // TODO
+    // concat path with results filename
+
+    // fopen and start sending data to client.
+
+    if ((send(sockfd, "\nOutput End\n", strlen("\nOutput End\n"), 0)) == -1)
+    {
+        printf(errno);
+    }
 }
 
-void matinv_run(int sockfd, char msg[])
+void matinv_run(int sockfd, char command[])
 {
-    // Append file separator to path.
-    char delimiter = '/';
-
-    char command[1024];
-    strncpy(command, cwd, sizeof(command));
-    strncat(command, &delimiter, 1);
-    strcat(command, msg);
-
-    // Start program.
-    // Might be necessary to get the results from kmeans? matinv prints to stdout.
     char output[255] = "";
     memset(output, 0, sizeof(output));
 
@@ -171,21 +187,30 @@ void run_with_fork()
                     exit(0);
                 }
 
+
                 // Generate filename
                 char data[30];
                 snprintf(data, sizeof(data), "%s_client%d_soln%d.txt", cmd, client_num, solution_num);
                 printf("Sending solution: %s\n", data);
                 send(client_socket, data, strlen(data) + 1, 0);
 
+                // Append file separator to path.
+                char delimiter = '/';
+
+                char command[1024];
+                strncpy(command, cwd, sizeof(command));
+                strncat(command, &delimiter, 1);
+                strcat(command, msg);
+
                 // TODO: 
                 // Here, either run kmeans_run or matinv_run based on msg.
                 if (strcmp(cmd, "kmeans") == 0)
                 {
-                    kmeans_run(client_socket, msg);
+                    kmeans_run(client_socket, command);
                 }
                 else if (strcmp(cmd, "matinv") == 0)
                 {
-                    matinv_run(client_socket, msg);
+                    matinv_run(client_socket, command);
                 }
             }
         }
