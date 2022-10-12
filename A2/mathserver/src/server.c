@@ -11,6 +11,8 @@
 #include <unistd.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <sys/ioctl.h>
+#include <sys/poll.h>
 
 // TODO Handle arguments for kmeans and matinv
 
@@ -52,6 +54,7 @@ int main(int argc, char *argv[])
             run_with_fork();
             break;
         case MUXBASIC:
+            run_with_muxbasic();
             break;
         case MUXSCALE:
             break;
@@ -298,9 +301,189 @@ void run_as_daemon(const char *process_name)
 }
 
 // TODO: For grade B, "-s muxbasic"
-// void run_with_muxbasic(){
+void run_with_muxbasic(){
+    int len, rc, on = 1;
+    int listen_sock = -1;
+    int new_sock = -1;
+    int desc_ready, end_server = 0, compress_array = 0;
+    int close_conn;
+    char buffer[80];
 
-// }
+    struct sockaddr_in addr;
+
+    int timeout;
+    
+    struct pollfd fds[200];
+
+    int nfds = 1, current_size = 0, i, j;
+
+    listen_sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (listen_sock < 0){
+        perror("Socket failed.\n");
+        exit(1);
+    }
+
+    // Sets socket to be reusable
+    rc = setsockopt(listen_sock, SOL_SOCKET, SO_REUSEADDR, (char *) &on, sizeof(on));
+    if (rc < 0) {
+        perror("Set socket options failed.\n");
+        close(listen_sock);
+        exit(1);
+    }
+
+    rc = ioctl(listen_sock, FIONBIO, (char *) &on);
+    if (rc < 0) {
+        perror("IO control failed.\n");
+        close(listen_sock);
+        exit(1);
+    }
+
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = INADDR_ANY;
+    addr.sin_port = htons(port);
+
+    rc = bind(listen_sock, (struct sockaddr *) &addr, sizeof(addr));
+    if (rc < 0) {
+        perror("Bind failed.\n");
+        close(listen_sock);
+        exit(1);
+    }
+    
+    // Listen to descriptor and set queue to 16.
+    rc = listen(listen_sock, 16);
+    if (rc < 0) {
+        perror("Listen failed.\n");
+        close(listen_sock);
+        exit(1);
+    }
+
+    memset(fds, 0, sizeof(fds));
+
+    fds[0].fd = listen_sock;
+    fds[0].events = POLLIN;
+
+    // Do we need timeout???
+    timeout = (5 * 60 * 1000);
+
+    do
+    {
+        printf("Polling for client...\n");
+
+        rc = poll(fds, nfds, timeout);
+
+        if (rc < 0) {
+            perror("Poll failed.\n");
+            break;
+        }
+
+        if (rc == 0) {
+            printf("Poll timed out. \n");
+            break;
+        }
+
+        current_size = nfds;
+        for (i = 0; i < current_size; i++) {
+            if (fds[i].revents == 0) {
+                continue;
+            }
+            if (fds[i].revents != POLLIN) {
+                printf("Error, revents.\n");
+                end_server = 1;
+                break;
+            }
+            if (fds[i].fd == listen_sock) {
+                do 
+                {
+                    new_sock = accept(listen_sock, NULL, NULL);
+
+                    /* This error-catch should exclude EWOULDBLOCK since 
+                        if this error is encountered we've accepted all of the descriptors in queue.
+                        Any other error should cause the server to exit. */
+                    if (new_sock < 0) {
+                        if (errno != EWOULDBLOCK) {
+                            perror("Accept failed.\n");
+                            end_server = 1;
+                        }
+                        break;
+                    }
+                    printf("New connection.\n");
+                    fds[nfds].fd = new_sock;
+                    fds[nfds].events = POLLIN;
+                    nfds++;
+                } while (new_sock != -1);
+            }
+            else {
+                // If we're in this else statement, it means this is not the listening socket.
+                printf("This descriptor is readable: %d\n", fds[i].fd);
+                close_conn = 0;
+
+                do 
+                {
+                    // Here we do the work we want to perform.
+                    rc = recv(fds[i].fd, buffer, sizeof(buffer), 0);
+                    if (rc < 0) {
+                        if (errno != EWOULDBLOCK) {
+                            perror("Recv failed.\n");
+                            close_conn = 1;
+                        }
+                        break;
+                    }
+
+                    if (rc == 0) {
+                        printf("Connection closed.\n");
+                        close_conn = 1;
+                        break;
+                    }
+
+                    len = rc;
+                    printf("Recieved %d bytes.\n", len);
+
+                    rc = send(fds[i].fd, buffer, len, 0);
+                    if (rc < 0) {
+                        perror("Send failed.\n");
+                        close_conn = 1;
+                        break;
+                    }
+
+                } while (1);
+
+                if (close_conn) {
+                    close(fds[i].fd);
+                    fds[i].fd = -1;
+                    compress_array = 1;
+                }
+            }
+        }
+
+        if (compress_array) {
+            compress_array = 0;
+            for (i = 0; i < nfds; i++) {
+                if (fds[i].fd == -1)
+                {
+                    for (j = i; j < nfds; j++)
+                    {
+                        fds[j].fd = fds[j+1].fd;
+                    }
+                    i--;
+                    nfds--;
+                }
+            }
+        }
+
+
+
+    } while (end_server == 0);
+
+    for (i = 0; i < nfds; i++) {
+        if (fds[i].fd >= 0)
+        {
+            close(fds[i].fd);
+        }
+    }
+
+
+}
 
 // TODO: For grade A, "-s muxscale"
 // void run_with_muxscale() {
