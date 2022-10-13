@@ -25,7 +25,6 @@ enum Strategy strat = FORK; // Fork strategy as default.
 int usage();
 void read_options(int argc, char *argv[]);
 char *validate_command(char command[]);
-int execute_command(char command[], char program[], char data[], int size_d);
 
 // Filenames for output files, incrementing id
 int client_num = 0, solution_num = 0;
@@ -44,7 +43,6 @@ int main(int argc, char *argv[])
 
     if (d)
     {
-        printf("Running as daemon\n");
         run_as_daemon("server");
     }
 
@@ -57,6 +55,7 @@ int main(int argc, char *argv[])
             run_with_muxbasic();
             break;
         case MUXSCALE:
+            run_with_muxscale();
             break;
     }
 
@@ -119,6 +118,86 @@ void matinv_run(int sockfd, char command[])
 
 }
 
+// Code by Advanced Programming in the UNIX® Environment: Second Edition - Stevens & Rago
+void run_as_daemon(const char *process_name)
+{
+    int i, fd0, fd1, fd2;
+    pid_t pid;
+    struct rlimit rl;
+    struct sigaction sa;
+
+    /* STEP 1: Clear file creation mask */
+    umask(0);
+
+    /* Get maximum number of file descriptors */
+    if (getrlimit(RLIMIT_NOFILE, &rl) < 0)
+    {
+        perror(process_name);
+        exit(EXIT_FAILURE);
+    }
+
+    /* STEP 2a: Fork a child process */
+    if ((pid = fork()) < 0)
+    {
+        perror(process_name);
+        exit(EXIT_FAILURE);
+    }
+    else if (pid != 0)
+    { /* STEP 2b: Exit the parent process */
+        exit(EXIT_SUCCESS);
+    }
+    /* STEP 3: Become a session leader to lose controlling TTY
+     * The child process executes this! */
+    setsid();
+
+    /* Ensure future opens won't allocate controlling TTYs */
+    sa.sa_handler = SIG_IGN;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    if (sigaction(SIGHUP, &sa, NULL) < 0)
+    {
+        perror("Can't ignore SIGHUP");
+        exit(EXIT_FAILURE);
+    }
+
+    if ((pid = fork()) < 0)
+    {
+        perror("Can't fork");
+        exit(EXIT_FAILURE);
+    }
+    else if (pid != 0) /* parent */
+        exit(EXIT_SUCCESS);
+
+    /* Change the current working directory to the root so
+     * we won't prevent file systems from being unmounted. */
+    if (chdir("/") < 0)
+    {
+        perror("Can't change to /");
+        exit(EXIT_FAILURE);
+    }
+
+    /* Close all open file descriptors */
+    printf("limit: %ld\n", rl.rlim_max);
+    if (rl.rlim_max == RLIM_INFINITY)
+        rl.rlim_max = 1024;
+    for (i = 0; i < rl.rlim_max; i++)
+        close(i);
+
+    /* Attach file descriptors 0, 1, and 2 to /dev/null */
+    fd0 = open("/dev/null", O_RDWR);
+    fd1 = dup(0);
+    fd2 = dup(0);
+
+    /* Initialize the log file. */
+    openlog(process_name, LOG_CONS, LOG_DAEMON);
+    if (fd0 != 0 || fd1 != 1 || fd2 != 2)
+    {
+        syslog(LOG_ERR, "unexpected file descriptors %d %d %d",
+               fd0, fd1, fd2);
+        exit(EXIT_FAILURE);
+    }
+}
+
 void run_with_fork()
 {
     signal(SIGPIPE, SIG_IGN);
@@ -127,7 +206,7 @@ void run_with_fork()
     if (server_socket == -1)
     {
         printf("Socket creation failed.\n");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     struct sockaddr_in server_address;
@@ -138,13 +217,13 @@ void run_with_fork()
     if ((bind(server_socket, (struct sockaddr *)&server_address, sizeof(server_address))) != 0)
     {
         printf("Socket bind failed.\n");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     if ((listen(server_socket, 1)) != 0)
     {
         printf("Listen to socket failed.\n");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
     printf("Listening for clients...\n");
 
@@ -170,7 +249,7 @@ void run_with_fork()
                 {
                     printf("Closing socket\n");
                     close(client_socket);
-                    exit(0);
+                    exit(EXIT_SUCCESS);
                 }
 
                 printf("Client %d commanded: %s\n", client_num, msg);
@@ -187,7 +266,7 @@ void run_with_fork()
                     char error[] = "Error! Valid commands: 'matinv' or 'kmeans'";
                     send(client_socket, error, sizeof(error), 0);
                     close(client_socket);
-                    exit(0);
+                    exit(EXIT_SUCCESS);
                 }
 
 
@@ -220,86 +299,6 @@ void run_with_fork()
     }
 }
 
-// Code by Advanced Programming in the UNIX® Environment: Second Edition - Stevens & Rago
-void run_as_daemon(const char *process_name)
-{
-    int i, fd0, fd1, fd2;
-    pid_t pid;
-    struct rlimit rl;
-    struct sigaction sa;
-
-    /* STEP 1: Clear file creation mask */
-    umask(0);
-
-    /* Get maximum number of file descriptors */
-    if (getrlimit(RLIMIT_NOFILE, &rl) < 0)
-    {
-        perror(process_name);
-        exit(1);
-    }
-
-    /* STEP 2a: Fork a child process */
-    if ((pid = fork()) < 0)
-    {
-        perror(process_name);
-        exit(1);
-    }
-    else if (pid != 0)
-    { /* STEP 2b: Exit the parent process */
-        exit(0);
-    }
-    /* STEP 3: Become a session leader to lose controlling TTY
-     * The child process executes this! */
-    setsid();
-
-    /* Ensure future opens won't allocate controlling TTYs */
-    sa.sa_handler = SIG_IGN;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = 0;
-    if (sigaction(SIGHUP, &sa, NULL) < 0)
-    {
-        perror("Can't ignore SIGHUP");
-        exit(1);
-    }
-
-    if ((pid = fork()) < 0)
-    {
-        perror("Can't fork");
-        exit(1);
-    }
-    else if (pid != 0) /* parent */
-        exit(0);
-
-    /* Change the current working directory to the root so
-     * we won't prevent file systems from being unmounted. */
-    if (chdir("/") < 0)
-    {
-        perror("Can't change to /");
-        exit(1);
-    }
-
-    /* Close all open file descriptors */
-    printf("limit: %ld\n", rl.rlim_max);
-    if (rl.rlim_max == RLIM_INFINITY)
-        rl.rlim_max = 1024;
-    for (i = 0; i < rl.rlim_max; i++)
-        close(i);
-
-    /* Attach file descriptors 0, 1, and 2 to /dev/null */
-    fd0 = open("/dev/null", O_RDWR);
-    fd1 = dup(0);
-    fd2 = dup(0);
-
-    /* Initialize the log file. */
-    openlog(process_name, LOG_CONS, LOG_DAEMON);
-    if (fd0 != 0 || fd1 != 1 || fd2 != 2)
-    {
-        syslog(LOG_ERR, "unexpected file descriptors %d %d %d",
-               fd0, fd1, fd2);
-        exit(1);
-    }
-}
-
 // TODO: For grade B, "-s muxbasic"
 void run_with_muxbasic(){
     // TODO: Quits if client exits...
@@ -321,7 +320,7 @@ void run_with_muxbasic(){
     listen_sock = socket(AF_INET, SOCK_STREAM, 0);
     if (listen_sock < 0){
         perror("Socket failed.\n");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     // Sets socket to be reusable
@@ -329,14 +328,14 @@ void run_with_muxbasic(){
     if (rc < 0) {
         perror("Set socket options failed.\n");
         close(listen_sock);
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     rc = ioctl(listen_sock, FIONBIO, (char *) &on);
     if (rc < 0) {
         perror("IO control failed.\n");
         close(listen_sock);
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     memset(&addr, 0, sizeof(addr));
@@ -348,7 +347,7 @@ void run_with_muxbasic(){
     if (rc < 0) {
         perror("Bind failed.\n");
         close(listen_sock);
-        exit(1);
+        exit(EXIT_FAILURE);
     }
     
     // Listen to descriptor and set queue to 16.
@@ -356,7 +355,7 @@ void run_with_muxbasic(){
     if (rc < 0) {
         perror("Listen failed.\n");
         close(listen_sock);
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     memset(fds, 0, sizeof(fds));
@@ -510,9 +509,10 @@ void run_with_muxbasic(){
 }
 
 // TODO: For grade A, "-s muxscale"
-// void run_with_muxscale() {
-
-// }
+void run_with_muxscale()
+{
+    printf("Muxscale not implemented\n");
+}
 
 void read_options(int argc, char *argv[])
 {
@@ -529,41 +529,44 @@ void read_options(int argc, char *argv[])
         {
             switch (argv[i][1])
             {
-            case 'd':
-                d = 1;
-                break;
-            case 'p':
-                port = atoi(argv[++i]);
-                break;
-            case 's':
-                value = argv[++i];
-                if (strcmp(value, "fork") == 0)
-                {
-                    strat = FORK;
-                }
-                else if (strcmp(value, "muxbasic") == 0)
-                {
-                    strat = MUXBASIC;
-                }
-                else if (strcmp(value, "muxscale") == 0)
-                {
-                    strat = MUXSCALE;
-                }
-                else
-                {
-                    printf("%s: ignored option: -%s\n", prog, argv[i]);
-                }
-                i++;
-                break;
-            case 'h':
-            case 'u':
-                usage();
-                break;
+                case 'd':
+                    d = 1;
+                    break;
 
-            default:
-                printf("%s: ignored option: -%s\n", prog, *argv);
-                printf("HELP: try %s -h \n\n", prog);
-                break;
+                case 'p':
+                    port = atoi(argv[++i]);
+                    break;
+
+                case 's':
+                    value = argv[++i];
+                    if (strcmp(value, "fork") == 0)
+                    {
+                        strat = FORK;
+                    }
+                    else if (strcmp(value, "muxbasic") == 0)
+                    {
+                        strat = MUXBASIC;
+                    }
+                    else if (strcmp(value, "muxscale") == 0)
+                    {
+                        strat = MUXSCALE;
+                    }
+                    else
+                    {
+                        printf("%s: ignored option: -s %s\n", prog, argv[i]);
+                    }
+                    i++;
+                    break;
+
+                case 'h':
+                case 'u':
+                    usage();
+                    break;
+
+                default:
+                    printf("%s: ignored option: -%s\n", prog, *argv);
+                    printf("HELP: try %s -h \n\n", prog);
+                    break;
             }
         }
     }
@@ -572,13 +575,12 @@ void read_options(int argc, char *argv[])
 int usage()
 {
     printf("\nUsage: server [-p port]\n");
-    printf("              [-d]            run as daemon (0/1)\n");
+    printf("              [-d]            run as daemon\n");
     printf("              [-s strategy]   specify the request handling strategy (fork/muxbasic/muxscale)\n");
     printf("              [-h]            help\n");
-    exit(1);
+    exit(EXIT_FAILURE);
 }
 
-// could not get this to work as a function
 char *validate_command(char command[])
 {
     char cmd[7];
@@ -586,8 +588,7 @@ char *validate_command(char command[])
 
     if (strcmp(cmd, "matinv") != 0 && strcmp(cmd, "kmeans") != 0)
     {
-        printf("Valid commands: 'matinv' or 'kmeans'\n"); // TODO should be shown to client instead
-        return "";
+        exit(EXIT_FAILURE);
     }
     return cmd;
 }
