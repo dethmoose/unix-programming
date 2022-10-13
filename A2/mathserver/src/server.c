@@ -46,6 +46,9 @@ int main(int argc, char *argv[])
         run_as_daemon("server");
     }
 
+
+    signal(SIGPIPE, SIG_IGN);
+    signal(SIGCHLD, SIG_IGN);
     switch (strat) 
     {
         case FORK:
@@ -89,7 +92,7 @@ void kmeans_run(int sockfd, char command[])
 
     if ((send(sockfd, "\nOutput End\n", strlen("\nOutput End\n"), 0)) == -1)
     {
-        printf(errno);
+        perror("Error sending FIN command.");
     }
 }
 
@@ -106,6 +109,7 @@ void matinv_run(int sockfd, char command[])
         if ((send(sockfd, output, strlen(output), 0)) == -1)
         {
             perror("Error sending command output.\n");
+            break;
         }
         memset(output, 0, sizeof(output));
     }
@@ -113,9 +117,10 @@ void matinv_run(int sockfd, char command[])
 
     if ((send(sockfd, "\nOutput End\n", strlen("\nOutput End\n"), 0)) == -1)
     {
-        printf(errno);
+        perror("Error sending FIN command");
+        if (errno == EPIPE)
+            close(sockfd);  
     }
-
 }
 
 // Code by Advanced Programming in the UNIX® Environment: Second Edition - Stevens & Rago
@@ -200,8 +205,6 @@ void run_as_daemon(const char *process_name)
 
 void run_with_fork()
 {
-    signal(SIGPIPE, SIG_IGN);
-    signal(SIGCHLD, SIG_IGN);
     int server_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (server_socket == -1)
     {
@@ -428,7 +431,7 @@ void run_with_muxbasic(){
                     rc = recv(fds[i].fd, msg, sizeof(msg), 0);
                     if (rc < 0) {
                         if (errno != EWOULDBLOCK) {
-                            perror("Recv failed.\n");
+                            perror("Recv failed. Client closed.");
                             close_conn = 1;
                         }
                         break;
