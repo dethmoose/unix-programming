@@ -34,6 +34,9 @@ int k = 9;                   // number of centroids
 point data[MAX_POINTS];      // Data coordinates
 point cluster[MAX_CLUSTERS]; // The coordinates of each cluster center (also called centroid)
 
+int count[MAX_CLUSTERS] = {0}; // Array to keep track of the number of points in each cluster
+point temp[MAX_CLUSTERS] = {{0.0}};
+
 char default_filename[22] = "./src/kmeans-data.txt";
 char *filename = default_filename;
 char default_results_path[41] = "./../computed_results/kmeans-results.txt"; 
@@ -140,8 +143,6 @@ int read_options(int argc, char *argv[])
 
 int get_closest_centroid(int id)
 {
-    // printf("get_closest_centroid %d\n", id); // debug
-
     // Find the nearest centroid
     int nearest_cluster = -1;
     double xdist, ydist, dist, min_dist;
@@ -164,10 +165,9 @@ int get_closest_centroid(int id)
     return nearest_cluster;
 }
 
-bool assign_cluster_to_point(int id)
+void assign_cluster_to_point(int id)
 {
     // printf("assign_cluster_to_point %d\n", id); // debug
-    bool something_changed = false;
     int old_cluster = -1, new_cluster = -1;
 
     old_cluster = data[id].cluster;
@@ -175,26 +175,41 @@ bool assign_cluster_to_point(int id)
     data[id].cluster = new_cluster; // Assign a cluster to the point
     if (old_cluster != new_cluster)
     {
-        something_changed = true;
+        somechange = true;
     }
-
-    return something_changed;
 }
 
 void update_cluster_centers(int id)
 {
-    // printf("update_cluster_centers %d\n", id); // debug
+    // Reset count and temp
+    if (id == 0)
+    {
+        memset(count, 0, sizeof(count));
+        for (int b = 0; b < MAX_CLUSTERS; b++)
+        {
+            temp[b].x = 0.0;
+            temp[b].y = 0.0;
+            temp[b].cluster = 0;
+        }
 
-    // Update the cluster centers
-    int count[MAX_CLUSTERS] = {0}; // Array to keep track of the number of points in each cluster
-    point temp[MAX_CLUSTERS] = {{0.0}};
-    // TODO: should count & temp be global variables? or just one value instead of array?
+        printf("Printing count, temp:\n\n"); // debug
+        for (int a = 0; a < MAX_CLUSTERS; a++)
+        {
+            printf("%d, ", count[a]);
+        }
+        printf("\n\n");
+        for (int b = 0; b < MAX_CLUSTERS; b++)
+        {
+            printf("(%.1f, %.1f, %d), ", temp[b].x, temp[b].y, temp[b].cluster);
+        }
+        printf("\n\n");
+    }
+    pthread_barrier_wait(&barrier);
 
     int c = data[id].cluster;
     count[c]++;
     temp[c].x += data[id].x;
     temp[c].y += data[id].y;
-
     pthread_barrier_wait(&barrier);
 
     // Only one thread needs to iterate over the clusters
@@ -278,10 +293,7 @@ int main(int argc, char *argv[])
     read_options(argc, argv);
     read_data();
     kmeans();
-
-    printf("kmeans done\n"); // debug
     write_results();
-
     return 0;
 }
 
@@ -290,17 +302,17 @@ void *child(void *params)
     struct threadArgs *args = (struct threadArgs *)params;
     int id = args->id;
 
-    bool something_changed = false;
+    // do
+    // {
+    // somechange = false;
+    // pthread_barrier_wait(&barrier);
     args->iter++; // Keep track of number of iterations
-
-    something_changed = assign_cluster_to_point(id);
-    if (something_changed)
-    {
-        somechange = true;
-    }
+    assign_cluster_to_point(id);
 
     pthread_barrier_wait(&barrier);
     update_cluster_centers(id);
+    // pthread_barrier_wait(&barrier);
+    // } while (somechange);
 
-    printf("DONE child %d (something_changed: %d)\n", id, something_changed); // debug
+    printf("DONE child %d\n", id); // debug
 }
