@@ -15,7 +15,6 @@
 #define MAX_POINTS 4096
 #define MAX_CLUSTERS 32
 
-pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_barrier_t barrier;
 struct threadArgs
 {
@@ -35,7 +34,8 @@ int k = 9;                   // number of centroids
 point data[MAX_POINTS];      // Data coordinates
 point cluster[MAX_CLUSTERS]; // The coordinates of each cluster center (also called centroid)
 
-char *filename = "./src/kmeans-data.txt";
+char default_filename[22] = "./src/kmeans-data.txt";
+char *filename = default_filename;
 bool somechange = false;
 
 void *child(void *params);
@@ -48,8 +48,20 @@ void read_data()
         perror("Cannot open file");
         exit(EXIT_FAILURE);
     }
+
     // TODO: N depends on number of entries in the input data file
-    // validate against maximum value MAX_POINTS?
+    if (strcmp(filename, default_filename) != 0)
+    {
+        // set N
+    }
+    if (N > MAX_POINTS)
+    {
+        N = MAX_POINTS;
+    }
+    else if (N < 0)
+    {
+        N = 0;
+    }
 
     // Initialize points from the data file
     // float temp = 0.0;
@@ -82,22 +94,36 @@ int read_options(int argc, char *argv[])
         {
             switch (*++*argv)
             {
-            case 'f':
-                --argc;
-                filename = *++argv;
-                // TODO temp N value for "./src/kmeans-data-50.txt"
-                N = 50;
-                break;
+                case 'f':
+                    --argc;
+                    filename = *++argv;
+                    // TODO temp N value for "./src/kmeans-data-50.txt"
+                    N = 50;
+                    break;
 
-            case 'k':
-                --argc;
-                k = atoi(*++argv);
-                // TODO validate against maximum value MAX_CLUSTERS?
-                break;
+                case 'k':
+                    --argc;
+                    int value = atoi(*++argv);
+                    if (value > MAX_CLUSTERS)
+                    {
+                        k = MAX_CLUSTERS;
+                    }
+                    else if (value < 1)
+                    {
+                        k = 1;
+                    }
+                    else
+                    {
+                        k = value;
+                    }
+                    break;
 
-            default:
-                printf("%s: ignored option: -%s\n", prog, *argv);
-                break;
+                default:
+                    printf("%s: ignored option: -%s\n", prog, *argv);
+                    printf("\nUsage: kmeans\n");
+                    printf("                [-f filename]    input data\n");
+                    printf("                [-k clusters]    number of clusters\n");
+                    break;
             }
         }
     }
@@ -185,52 +211,52 @@ int kmeans()
     printf("kmeans (k=%d, N=%d, file=%s)\n", k, N, filename); // debug
 
     // N threads
-    pthread_barrier_init(&barrier, NULL, N);
-    pthread_t *children;     // dynamic array of child threads
-    struct threadArgs *args; // argument buffer
+    // pthread_barrier_init(&barrier, NULL, N);
+    // pthread_t *children;     // dynamic array of child threads
+    // struct threadArgs *args; // argument buffer
 
-    children = malloc(N * sizeof(pthread_t));     // allocate array of handles
-    args = malloc(N * sizeof(struct threadArgs)); // args vector
+    // children = malloc(N * sizeof(pthread_t));     // allocate array of handles
+    // args = malloc(N * sizeof(struct threadArgs)); // args vector
 
-    for (int i = 0; i < N; i++)
-    {
-        args[i].id = i;
-        args[i].iter = 0;
-        pthread_create(&(children[i]),    // our handle for the child
-                       NULL,              // attributes of the child
-                       child,             // the function it should run
-                       (void *)&args[i]); // args to that function
-    }
+    // for (int i = 0; i < N; i++)
+    // {
+    //     args[i].id = i;
+    //     args[i].iter = 0;
+    //     pthread_create(&(children[i]),    // our handle for the child
+    //                    NULL,              // attributes of the child
+    //                    child,             // the function it should run
+    //                    (void *)&args[i]); // args to that function
+    // }
 
     // wait for all threads to complete
-    for (int j = 0; j < N; j++)
-    {
-        pthread_join(children[j], NULL);
-    }
+    // for (int j = 0; j < N; j++)
+    // {
+    //     pthread_join(children[j], NULL);
+    // }
 
     // calculate iterations
-    printf("kmeans calculating iterations\n"); // debug
-    int iter = 0;
-    for (int k = 0; k < N; k++)
-    {
-        if (args[k].iter > iter)
-        {
-            iter = args[k].iter;
-        }
-    }
+    // printf("kmeans calculating iterations\n"); // debug
+    // int iter = 0;
+    // for (int k = 0; k < N; k++)
+    // {
+    //     if (args[k].iter > iter)
+    //     {
+    //         iter = args[k].iter;
+    //     }
+    // }
 
-    printf("Number of iterations taken = %d\n", iter);
-    printf("Computed cluster numbers successfully!\n");
+    // printf("Number of iterations taken = %d\n", iter);
+    // printf("Computed cluster numbers successfully!\n");
 
-    free(args);
-    free(children);
-    pthread_mutex_destroy(&lock);
-    pthread_barrier_destroy(&barrier);
+    // free(args);
+    // free(children);
+    // pthread_barrier_destroy(&barrier);
     return 0;
 }
 
 void write_results()
 {
+    // TODO: allowed to change path/filename
     FILE *fp = fopen("./../computed_results/kmeans-results.txt", "w");
     if (fp == NULL)
     {
@@ -264,32 +290,31 @@ void *child(void *params)
     struct threadArgs *args = (struct threadArgs *)params;
     int id = args->id;
 
-    bool something_changed = false;
-    do
-    {
-        args->iter++; // Keep track of number of iterations
-        somechange = false;
-        pthread_barrier_wait(&barrier);
-        // printf("child %d iter %d before assign\n", id, args->iter); // debug
+    // bool something_changed = false;
+    // do
+    // {
+    //     args->iter++; // Keep track of number of iterations
+    //     somechange = false;
+    //     pthread_barrier_wait(&barrier);
+    //     // printf("child %d iter %d before assign\n", id, args->iter); // debug
 
-        something_changed = assign_cluster_to_point(id);
-        if (something_changed)
-        {
-            pthread_mutex_lock(&lock);
-            somechange = true;
-            pthread_mutex_unlock(&lock);
-            something_changed = false;
-        }
+    //     something_changed = assign_cluster_to_point(id);
+    //     if (something_changed)
+    //     {
+    //         pthread_mutex_lock(&lock);
+    //         somechange = true;
+    //         pthread_mutex_unlock(&lock);
+    //         something_changed = false;
+    //     }
 
-        printf("child %d iter %d wait before update_cluster_centers\n", id, args->iter); // debug
+    //     printf("child %d iter %d wait before update_cluster_centers\n", id, args->iter); // debug
 
-        pthread_barrier_wait(&barrier);
-        update_cluster_centers(id);
+    //     pthread_barrier_wait(&barrier);
+    //     update_cluster_centers(id);
 
-        printf("child %d iter %d after update_cluster_centers\n", id, args->iter); // debug
-    } while (somechange);
+    //     printf("child %d iter %d after update_cluster_centers\n", id, args->iter); // debug
+    // } while (somechange);
 
-    pthread_barrier_wait(&barrier);
+    // pthread_barrier_wait(&barrier);
     printf("DONE child %d\n", id); // debug
-    return NULL;
 }
