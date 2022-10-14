@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
     if (server_socket == -1)
     {
         printf("Socket creation failed.\n");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     struct sockaddr_in server_address;
@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
     if (connect_status == -1)
     {
         printf("Error: cannot connect\n");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     while (1)
@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
         if (fp == NULL)
         {
             printf("Error opening file.\n");
-            exit(1); // Exit here?
+            exit(EXIT_FAILURE); // Exit here?
         }
 
         char recvbuf[255] = "";
@@ -98,7 +98,7 @@ int main(int argc, char *argv[])
         }
         fclose(fp);
     }
-    exit(0);
+    exit(EXIT_SUCCESS);
 }
 
 void read_options(int argc, char *argv[])
@@ -139,5 +139,5 @@ int usage()
     printf("\nUsage: client [-p port]\n");
     printf("              [-ip address]\n");
     printf("              [-h]          help\n");
-    exit(1);
+    exit(EXIT_FAILURE);
 }
