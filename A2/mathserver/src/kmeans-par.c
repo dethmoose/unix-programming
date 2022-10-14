@@ -1,7 +1,7 @@
 /***************************************************************************
  *
  * Parallel version of Kmeans
- *
+ * TODO: measure speedup kmeans.c vs kmeans-par.c
  *
  ***************************************************************************/
 
@@ -54,10 +54,10 @@ void read_data()
         exit(EXIT_FAILURE);
     }
 
-    // TODO: N depends on number of entries in the input data file
+    // N depends on the number of entries in the input data file
     if (strcmp(filename, default_filename) != 0)
     {
-        // set N
+        // TODO: set N to number of non-empty lines in filename
     }
     if (N > MAX_POINTS)
     {
@@ -69,7 +69,6 @@ void read_data()
     }
 
     // Initialize points from the data file
-    // float temp = 0.0;
     for (int i = 0; i < N; i++)
     {
         fscanf(fp, "%f %f", &data[i].x, &data[i].y);
@@ -131,7 +130,7 @@ int read_options(int argc, char *argv[])
                 default:
                     printf("%s: ignored option: -%s\n", prog, *argv);
                     printf("\nUsage: kmeans\n");
-                    printf("                [-f filename]    input data\n");
+                    printf("                [-f filename]    input data file\n");
                     printf("                [-k clusters]    number of clusters\n");
                     printf("                [-p path]        path and filename for results\n");
                     break;
@@ -154,20 +153,17 @@ int get_closest_centroid(int id)
         xdist = data[id].x - cluster[c].x;
         ydist = data[id].y - cluster[c].y;
         dist = xdist * xdist + ydist * ydist; // The square of Euclidean distance
-        // printf("%.2lf \n", dist);
         if (dist <= min_dist)
         {
             min_dist = dist;
             nearest_cluster = c;
         }
     }
-    // printf("-----------\n");
     return nearest_cluster;
 }
 
 void assign_cluster_to_point(int id)
 {
-    // printf("assign_cluster_to_point %d\n", id); // debug
     int old_cluster = -1, new_cluster = -1;
 
     old_cluster = data[id].cluster;
@@ -181,7 +177,7 @@ void assign_cluster_to_point(int id)
 
 void update_cluster_centers(int id)
 {
-    // Reset count and temp
+    // Reset count and temp (only one thread)
     if (id == 0)
     {
         memset(count, 0, sizeof(count));
@@ -191,18 +187,6 @@ void update_cluster_centers(int id)
             temp[b].y = 0.0;
             temp[b].cluster = 0;
         }
-
-        printf("Printing count, temp:\n\n"); // debug
-        for (int a = 0; a < MAX_CLUSTERS; a++)
-        {
-            printf("%d, ", count[a]);
-        }
-        printf("\n\n");
-        for (int b = 0; b < MAX_CLUSTERS; b++)
-        {
-            printf("(%.1f, %.1f, %d), ", temp[b].x, temp[b].y, temp[b].cluster);
-        }
-        printf("\n\n");
     }
     pthread_barrier_wait(&barrier);
 
@@ -225,7 +209,7 @@ void update_cluster_centers(int id)
 
 int kmeans()
 {
-    printf("kmeans (k=%d, N=%d, inputfile='%s', resultfile='%s')\n", k, N, filename, results_path); // debug
+    // printf("kmeans (k=%d, N=%d, inputfile='%s', resultfile='%s')\n", k, N, filename, results_path); // debug
 
     // N threads
     pthread_barrier_init(&barrier, NULL, N);
@@ -271,7 +255,6 @@ int kmeans()
 
 void write_results()
 {
-    // TODO: allowed to change path/filename
     FILE *fp = fopen(results_path, "w");
     if (fp == NULL)
     {
@@ -302,17 +285,21 @@ void *child(void *params)
     struct threadArgs *args = (struct threadArgs *)params;
     int id = args->id;
 
-    // do
-    // {
-    // somechange = false;
-    // pthread_barrier_wait(&barrier);
-    args->iter++; // Keep track of number of iterations
-    assign_cluster_to_point(id);
+    do
+    {
+        pthread_barrier_wait(&barrier);
+        // Set global somechange value to false before starting iteration
+        if (id == 0)
+        {
+            somechange = false;
+        }
+        pthread_barrier_wait(&barrier);
 
-    pthread_barrier_wait(&barrier);
-    update_cluster_centers(id);
-    // pthread_barrier_wait(&barrier);
-    // } while (somechange);
+        args->iter++; // Keep track of number of iterations
+        assign_cluster_to_point(id);
+        pthread_barrier_wait(&barrier);
 
-    printf("DONE child %d\n", id); // debug
+        update_cluster_centers(id);
+        pthread_barrier_wait(&barrier); // Wait for all to read somechange before resetting it
+    } while (somechange);
 }

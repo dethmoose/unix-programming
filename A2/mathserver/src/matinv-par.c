@@ -2,6 +2,7 @@
  *
  * Parallel version of Matrix Inverse
  * An adapted version of the code by Håkan Grahn
+ * TODO: measure speedup matrix_inverse.c vs matinv-par.c
  *
  ***************************************************************************/
 
