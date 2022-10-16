@@ -6,7 +6,6 @@
 #include <fcntl.h>
 
 // TODO: kmeans send data to server with -f filename option
-// TODO: when running on separate machines, make sure output files get the correct data
 
 // Flags and default values.
 int port = 1337;
@@ -21,6 +20,12 @@ int main(int argc, char *argv[])
     if (argc < 2)
         usage();
     read_options(argc, argv);
+
+    if (port == -1) 
+    {
+        printf("Error: No port assigned\n");
+        usage();
+    }
 
     int server_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (server_socket == -1)
@@ -57,11 +62,15 @@ int main(int argc, char *argv[])
         Reason is that the server sends an error message, but the client is actually 
         waiting to recieve the information for the file to be created, and instead of a
         proper filename, it instead opens a file called "Error: ..."
+
+        Read strData and parse command before sending.
         */
+
+
        
         if ((send(server_socket, strData, strlen(strData) + 1, 0)) == -1)
         {
-            perror("Error sending command.\n");
+            perror("Error sending command.");
         }
 
         // If -f flag is set, open filename and send data to server.
@@ -77,7 +86,7 @@ int main(int argc, char *argv[])
         if (fp == NULL)
         {
             printf("Error opening file.\n");
-            exit(EXIT_FAILURE); // Exit here?
+            exit(EXIT_FAILURE);
         }
 
         char recvbuf[255] = "";
@@ -87,7 +96,7 @@ int main(int argc, char *argv[])
         {
             if ((recv_bytes = recv(server_socket, recvbuf, sizeof(recvbuf), 0)) == -1)
             {
-                perror("Error recieving output.\n");
+                perror("Error recieving output.");
             }
             else if (strstr(recvbuf, "\nOutput End\n") != NULL) { break; }
             else
@@ -111,7 +120,6 @@ void read_options(int argc, char *argv[])
     {
         if (argv[i][0] == '-')
         {
-            // printf("Checking\n");
             switch (argv[i][1])
             {
             case 'i':

@@ -1,7 +1,6 @@
 /***************************************************************************
  *
  * Parallel version of Kmeans
- * TODO: measure speedup kmeans.c vs kmeans-par.c
  *
  ***************************************************************************/
 
@@ -101,8 +100,6 @@ int read_options(int argc, char *argv[])
                 case 'f':
                     --argc;
                     filename = *++argv;
-                    // TODO temp N value for "./src/kmeans-data-10.txt"
-                    N = 10;
                     break;
 
                 case 'k':

@@ -62,7 +62,7 @@ int read_options(int argc, char *argv[])
             case 'f':
                 --argc;
                 filename = *++argv;
-                N = 50; // TODO temp N value for "./src/kmeans-data-50.txt"
+                N = 50; 
                 break;
 
             default:

@@ -14,10 +14,8 @@
 #include <sys/ioctl.h>
 #include <sys/poll.h>
 
-// TODO Handle arguments for kmeans and matinv
-
 // Default values
-int port = 1337;
+int port = -1;
 int d = 0;
 enum Strategy{FORK, MUXBASIC, MUXSCALE};
 enum Strategy strat = FORK; // Fork strategy as default.
@@ -35,8 +33,14 @@ char cwd[1024];
 int main(int argc, char *argv[])
 {
     read_options(argc, argv);
-    // printf("Strategy: %d\n", strat);
-    // printf("Port number: %d, daemon: %d, strategy: %d\n", port, d, strat);
+
+    if (port == -1) {
+        printf("No port assigned.\n");
+        usage();
+    }
+
+    // printf("Strategy: %d\n", strat); // debug
+    // printf("Port number: %d, daemon: %d, strategy: %d\n", port, d, strat); // debug
     
     // Mostly useful becuse daemonizing the process will change working dir to root. Need to know the path to mathserver. 
     getcwd(cwd, sizeof(cwd));
@@ -45,7 +49,6 @@ int main(int argc, char *argv[])
     {
         run_as_daemon("server");
     }
-
 
     signal(SIGPIPE, SIG_IGN);
     signal(SIGCHLD, SIG_IGN);
@@ -67,6 +70,8 @@ int main(int argc, char *argv[])
 
 void kmeans_run(int sockfd, char command[])
 {
+    // TODO: Read and parse command
+
     // Create the directory for client results
     char path[1024];
     strncpy(path, cwd, sizeof(path));
@@ -77,6 +82,7 @@ void kmeans_run(int sockfd, char command[])
     
     struct stat st = {0};
 
+    // Create dir if not exist
     if (stat(path, &st) == -1) {
         mkdir(path, 0666);
     }
@@ -85,14 +91,17 @@ void kmeans_run(int sockfd, char command[])
     FILE *fp = popen(command, "r");
     pclose(fp);
 
-    // TODO
+    // TODO handle input file
     // concat path with results filename
 
     // fopen and start sending data to client.
 
     if ((send(sockfd, "\nOutput End\n", strlen("\nOutput End\n"), 0)) == -1)
     {
-        perror("Error sending FIN command.");
+        if (errno == EPIPE)
+            close(sockfd);
+        else 
+            perror("Error sending FIN command");
     }
 }
 
@@ -117,9 +126,10 @@ void matinv_run(int sockfd, char command[])
 
     if ((send(sockfd, "\nOutput End\n", strlen("\nOutput End\n"), 0)) == -1)
     {
-        perror("Error sending FIN command");
         if (errno == EPIPE)
-            close(sockfd);  
+            close(sockfd);
+        else 
+            perror("Error sending FIN command");
     }
 }
 
@@ -303,8 +313,9 @@ void run_with_fork()
 }
 
 // TODO: For grade B, "-s muxbasic"
-void run_with_muxbasic(){
-    // TODO: Quits if client exits...
+// https://www.ibm.com/docs/en/i/7.2?topic=designs-using-poll-instead-select
+void run_with_muxbasic()
+{
     int len, rc, on = 1;
     int listen_sock = -1;
     int new_sock = -1;
@@ -356,7 +367,7 @@ void run_with_muxbasic(){
     // Listen to descriptor and set queue to 16.
     rc = listen(listen_sock, 16);
     if (rc < 0) {
-        perror("Listen failed.\n");
+        perror("Listen failed.");
         close(listen_sock);
         exit(EXIT_FAILURE);
     }
@@ -376,7 +387,7 @@ void run_with_muxbasic(){
         rc = poll(fds, nfds, timeout);
 
         if (rc < 0) {
-            perror("Poll failed.\n");
+            perror("Poll failed.");
             break;
         }
 
@@ -405,7 +416,7 @@ void run_with_muxbasic(){
                         Any other error should cause the server to exit. */
                     if (new_sock < 0) {
                         if (errno != EWOULDBLOCK) {
-                            perror("Accept failed.\n");
+                            perror("Accept failed.");
                             end_server = 1;
                         }
                         break;
