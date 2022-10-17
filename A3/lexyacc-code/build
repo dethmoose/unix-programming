@@ -1,0 +1,10 @@
+# bison -d calc1.y    produces calc1.tab.c
+# bison -y -d calc1.y produces y.tab.c (the standard yacc output)
+
+# calc3
+bison -y -d calc3.y
+flex calc3.l
+gcc -c y.tab.c lex.yy.c
+gcc y.tab.o lex.yy.o ../calc3a.c -o ../bin/calc3a.exe
+gcc y.tab.o lex.yy.o ../calc3b.c -o ../bin/calc3b.exe
+gcc y.tab.o lex.yy.o ../calc3g.c -o ../bin/calc3g.exe

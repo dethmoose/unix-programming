@@ -1,7 +1,17 @@
 # Assignment 3
 
-Zoom with instructions 2022-10-17. 
-Lab Q/A 2022-10-18.
 Deadline 2022-10-30.
+
+Change calc3b.c into calc3i.c that instead of emitting the pseudo assembly code emits actual x86-64 assembler instructions.
+
+Write a shell script, called `x86-64-driver.sh`, which takes as input a file with the `.calc` ending and then writes the required prologue into a new file with the ending `.s`, appends this file with the output of your compiler (i.e., `calc3i.exe`) for the given `.calc` file, and appends an epilogue.
+
+## Todo list
+
+### Grade D
+
+-   Implement compiler for basic stack machine.
+
+-   Implement one additional function
 
 ## Questions
