@@ -1,3 +1,5 @@
+!<arch>
+fact.s/         0           0     0     644     547       `
 # Create library with `ar` program:
 # `ar -crs lib.a fact.s`
 
@@ -9,7 +11,7 @@
     .text
     .global fact
 
-# Input value n in %rdi, return value in %rax
+# Takes input value n in %rdi, return value in %rax
 fact:
     cmpq    $1,%rdi         # if n>1
     jle     base
@@ -22,3 +24,4 @@ fact:
 base:
     movq    $1,%rax         # else return 1
     ret
+

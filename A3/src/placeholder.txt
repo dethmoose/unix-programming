@@ -1,2 +1,0 @@
-src folder should contain source files for the external library (higher grade)
-

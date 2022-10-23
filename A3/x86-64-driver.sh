@@ -10,4 +10,4 @@ done
 
 # Command to parse calc file, and compile...
 
-echo "  exit" >> $filename   
+echo "  exit" >> $filename
