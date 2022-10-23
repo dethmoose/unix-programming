@@ -1,70 +1,75 @@
-# To build: 
-# `gcc -no-pie -fPIC assemblytest.s -o assemblytest`
-
-# To debug assembly file with gdb:
-# `gcc -g -o assemblytest assemblytest.s`
+# To debug with gdb:
+# `gcc -g -no-pie -fPIC assemblytest.s -o assemblytest`
 # `gdb test`
+
 # Set breakpoint for function:                        `b functionname`
 # View registers:                                     `info registers` 
 # Specific register (integer): `print $rax` , (hexa): `print/x $rax`
 # Get update for register every time program pauses:  `display $rax` 
 
-	.data
-headMsg:	.asciz	"Start av testprogram. Skriv in 5 tal!"
-endMsg:	.asciz	"Slut pa testprogram"
-buf:	.space	64
-sum:	.quad	0
-count:	.quad	0
-temp:	.quad	0
+# Testing `A3/bin/calc3b.exe < A3/test` (gcd)
+    .data
+aMsg: 	.asciz   	"a=%d\n"
+bMsg: 	.asciz   	"b=%d\n"
+endMsg: .asciz   	"end\n"
+a:		.quad		0
+b:		.quad		0
 
-	.text
-	.global	main
+    .text
+    .global main
+
 main:
-	pushq	$0
-	movq	$headMsg,%rdi
-	call	putText
-	call	outImage
-	call	inImage
-	movq	$5,count
-l1:
-	call	getInt
-	movq	%rax,temp
-	cmpq	$0,%rax
-	jge		l2
-	call	getOutPos
-	decq	%rax
-	movq	%rax,%rdi
-	call	setOutPos
-l2:
-	movq	temp,%rdx
-	add	%rdx,sum
-	movq	%rdx,%rdi
-	call	putInt
-	movq	$'+',%rdi
-	call	putChar
-	decq	count
-	cmpq	$0,count
-	jne	l1
-	call	getOutPos
-	decq	%rax
-	movq	%rax,%rdi
-	call	setOutPos
-	movq	$'=',%rdi
-	call	putChar
-	movq	sum, %rdi
-	call	putInt
-	call	outImage
-	movq	$12,%rsi
-	movq	$buf,%rdi
-	call	getText
-	movq	$buf,%rdi
-	call	putText
-	movq	$125,%rdi
-	call	putInt
-	call	outImage
-	movq	$endMsg,%rdi
-	call	putText
-	call	outImage
-	popq	%rax
-	ret
+    pushq   $0       	# Stack 16 bytes ”aligned”
+    pushq	$732
+	popq	a
+	pushq	$2684
+	popq	b
 
+# L000:
+# 	pushq	a
+# 	pushq	b
+# 	# TODO compNE
+# 	jz		L001
+# 	pushq	a
+# 	pushq	b
+# 	# TODO compGT
+# 	jz		L002
+# 	pushq	a
+# 	pushq	b
+# 	# subq				# TODO subq S,D (D-S)
+# 	popq	a
+# 	jmp		L003
+# L002:
+# 	pushq	b
+# 	pushq	a
+# 	# subq				# TODO subq S,D (D-S)
+# 	popq	b
+# L003:
+# 	jmp		L000
+# L001:
+# 	pushq	a
+# 	call	printf
+# 	pushq	a
+# 	pushq	b
+# 	call	gcd
+# 	call	printf
+# 	popq	b
+
+# debug print a & b
+lPrint:
+	movq	a,%rsi
+	movq	$aMsg,%rdi
+	call	printf
+	movq	b,%rsi
+	movq	$bMsg,%rdi
+	call	printf
+    movq    $endMsg,%rdi
+    call    printf
+lEnd:
+    popq    %rax		# Stack align
+    ret
+
+# temp gcd
+gcd:
+	movq	$244,%rdi	# 732 gcd 2684 = 244
+    ret

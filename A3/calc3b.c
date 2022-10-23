@@ -13,10 +13,10 @@ int ex(nodeType *p)
     switch (p->type)
     {
         case typeCon:
-            printf("\tpush\t%d\n", p->con.value);
+            printf("\tpushq\t$%d\n", p->con.value);
             break;
         case typeId:
-            printf("\tpush\t%c\n", p->id.i + 'a');
+            printf("\tpushq\t%c\n", p->id.i + 'a');
             break;
         case typeOpr:
             switch (p->opr.oper)
@@ -51,23 +51,23 @@ int ex(nodeType *p)
                     break;
                 case PRINT:
                     ex(p->opr.op[0]);
-                    printf("\tprint\n");
+                    printf("\tcall\tprintf\n");
                     break;
                 case '=':
                     ex(p->opr.op[1]);
-                    printf("\tpop\t%c\n", p->opr.op[0]->id.i + 'a');
+                    printf("\tpopq\t%c\n", p->opr.op[0]->id.i + 'a');
                     break;
                 case UMINUS:
                     ex(p->opr.op[0]);
-                    printf("\tneg\n");
+                    printf("\tnegq\n");
                     break;
                 case FACT:
                     ex(p->opr.op[0]);
-                    printf("\tfact\n");
+                    printf("\tcall\tfact\n");
                     break;
                 case LNTWO:
                     ex(p->opr.op[0]);
-                    printf("\lntwo\n");
+                    printf("\tcall\tlntwo\n");
                     break;
                 default:
                     ex(p->opr.op[0]);
@@ -75,36 +75,36 @@ int ex(nodeType *p)
                     switch (p->opr.oper)
                     {
                         case GCD:
-                            printf("\tgcd\n");
+                            printf("\tcall\tgcd\n");
                             break;
                         case '+':
-                            printf("\tadd\n");
+                            printf("\taddq\n");
                             break;
                         case '-':
-                            printf("\tsub\n");
+                            printf("\tsubq\n");
                             break;
                         case '*':
-                            printf("\tmul\n");
+                            printf("\timulq\n");
                             break;
                         case '/':
-                            printf("\tdiv\n");
+                            printf("\tdivq\n");
                             break;
-                        case '<':
+                        case '<': // TODO: cmpq & jlt?
                             printf("\tcompLT\n");
                             break;
-                        case '>':
+                        case '>': // cmpq & jgt?
                             printf("\tcompGT\n");
                             break;
-                        case GE:
+                        case GE: // cmpq & jge?
                             printf("\tcompGE\n");
                             break;
-                        case LE:
+                        case LE: // cmpq & jle?
                             printf("\tcompLE\n");
                             break;
-                        case NE:
+                        case NE: // cmpq & jne?
                             printf("\tcompNE\n");
                             break;
-                        case EQ:
+                        case EQ: // cmpq & je?
                             printf("\tcompEQ\n");
                             break;
                     }
