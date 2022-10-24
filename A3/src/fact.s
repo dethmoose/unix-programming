@@ -1,15 +1,15 @@
-# Create library with `ar` program:
-# `ar -crs lib.a fact.s`
+# Replace .s file in library with `ar` program from A3/:
+# `ar -rsv ./lib/lib.a ./src/fact.s`
 
 # List all modules within library:
-# `ar -t lib.a`
+# `ar -t ./lib/lib.a`
 
 # Factorial
     .data
     .text
     .global fact
 
-# Input value n in %rdi, return value in %rax
+# Input value in %rdi, return value in %rax
 fact:
     cmpq    $1,%rdi         # if n>1
     jle     base

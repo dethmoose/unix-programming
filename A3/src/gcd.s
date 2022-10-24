@@ -1,15 +1,15 @@
-# Create library with `ar` program:
-# `ar -crs lib.a gcd.s`
+# Replace .s file in library with `ar` program from A3/:
+# `ar -rsv ./lib/lib.a ./src/gcd.s`
 
 # List all modules within library:
-# `ar -t lib.a`
+# `ar -t ./lib/lib.a`
 
 # Greatest Common Divisor
     .data
     .text
     .global gcd
 
-# Takes input value n in %rdi, return value in %rax
+# Input values in %rdi & %rsi, return value in %rax
 gcd:
     # Take two arguments
     # Return the gcd

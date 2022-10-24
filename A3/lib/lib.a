@@ -1,17 +1,17 @@
 !<arch>
-fact.s/         0           0     0     644     547       `
-# Create library with `ar` program:
-# `ar -crs lib.a fact.s`
+fact.s/         0           0     0     644     580       `
+# Replace .s file in library with `ar` program from A3/:
+# `ar -rsv ./lib/lib.a ./src/fact.s`
 
 # List all modules within library:
-# `ar -t lib.a`
+# `ar -t ./lib/lib.a`
 
 # Factorial
     .data
     .text
     .global fact
 
-# Takes input value n in %rdi, return value in %rax
+# Input value n in %rdi, return value in %rax
 fact:
     cmpq    $1,%rdi         # if n>1
     jle     base
@@ -24,4 +24,3 @@ fact:
 base:
     movq    $1,%rax         # else return 1
     ret
-

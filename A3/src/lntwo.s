@@ -1,15 +1,15 @@
-# Create library with `ar` program:
-# `ar -crs lib.a lntwo.s`
+# Replace .s file in library with `ar` program from A3/:
+# `ar -rsv ./lib/lib.a ./src/lntwo.s`
 
 # List all modules within library:
-# `ar -t lib.a`
+# `ar -t ./lib/lib.a`
 
 # Binary Logarithm
     .data
     .text
     .global lntwo
 
-# Takes input value n in %rdi, return value in %rax
+# Input value in %rdi, return value in %rax
 lntwo:
     # Take one argument
     # Return the binary log 
