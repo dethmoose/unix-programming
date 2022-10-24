@@ -6,7 +6,8 @@ static int lbl;
 
 int ex(nodeType *p)
 {
-    int lbl1, lbl2;
+    int lbl1 = 0;
+    int lbl2 = 0;
 
     if (!p)
         return 0;
@@ -34,7 +35,6 @@ int ex(nodeType *p)
                     if (p->opr.nops > 2)
                     {
                         /* if else */
-                        printf("\tjz\tL%03d\n", lbl1 = lbl++);
                         ex(p->opr.op[1]);
                         printf("\tjmp\tL%03d\n", lbl2 = lbl++);
                         printf("L%03d:\n", lbl1);
@@ -81,7 +81,11 @@ int ex(nodeType *p)
                             printf("\taddq\n"); // TODO: operands
                             break;
                         case '-':
-                            printf("\tsubq\n"); // TODO: operands
+                            // a = a - b
+                            // movq b, %rdi
+                            // subq %rdi, a
+                            printf("\tmovq\t%c, %%rdi\n", p->opr.op[1]->id.i + 'a');
+                            printf("\tsubq\t%%rdi, %c\n", p->opr.op[0]->id.i + 'a'); // TODO: operands
                             break;
                         case '*':
                             printf("\timulq\n"); // TODO: operands
@@ -90,22 +94,29 @@ int ex(nodeType *p)
                             printf("\tdivq\n"); // TODO: operands
                             break;
                         case '<': // TODO: cmpq & jlt?
-                            printf("\tcompLT\n");
+                            printf("\tcmp\t%c, %c\n", p->opr.op[1]->id.i + 'a', p->opr.op[0]->id.i + 'a');
+                            printf("\tjl\tL%03d\n", lbl1 = lbl++);
                             break;
                         case '>': // cmpq & jgt?
                             printf("\tcompGT\n");
+                            printf("\tjg\tL%03d\n", lbl1 = lbl++);
                             break;
                         case GE: // cmpq & jge?
-                            printf("\tcompGE\n");
+                            printf("\tcmp\t%c, %c\n", p->opr.op[1]->id.i + 'a', p->opr.op[0]->id.i + 'a');
+                            printf("\tjge\tL%03d\n", lbl1 = lbl++);
                             break;
                         case LE: // cmpq & jle?
-                            printf("\tcompLE\n");
+                            printf("\tcmp\t%c, %c\n", p->opr.op[1]->id.i + 'a', p->opr.op[0]->id.i + 'a');
+                            printf("\tjle\tL%03d\n", lbl1 = lbl++);
                             break;
                         case NE: // cmpq & jne?
-                            printf("\tcompNE\n");
+                            printf("\tmovq\t%c, %%rdi\n", p->opr.op[1]->id.i + 'a');
+                            printf("\tsubq\t%%rdi, %c\n", p->opr.op[0]->id.i + 'a');
+                            printf("\tjne\tL%03d\n", lbl1 = lbl++);
                             break;
                         case EQ: // cmpq & je?
-                            printf("\tcompEQ\n");
+                            printf("\tcmp\t%c, %c\n", p->opr.op[1]->id.i + 'a', p->opr.op[0]->id.i + 'a');
+                            printf("\tje\tL%03d\n", lbl1 = lbl++);
                             break;
                     }
             }

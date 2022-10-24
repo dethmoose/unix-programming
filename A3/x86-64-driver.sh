@@ -15,7 +15,7 @@ echo    "main:"             >> $filename
 # Command to parse calc file, and compile...
 
 # Executing with test file
-(./bin/calc3b.exe < ./testprogs/gcd.calc) >> $filename
+(./bin/calc3y.exe < $in_filename) >> $filename
 
 # Create epilogue
 echo    "lExit:"             >> $filename
