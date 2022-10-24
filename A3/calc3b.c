@@ -78,16 +78,16 @@ int ex(nodeType *p)
                             printf("\tcall\tgcd\n");
                             break;
                         case '+':
-                            printf("\taddq\n");
+                            printf("\taddq\n"); // TODO: operands
                             break;
                         case '-':
-                            printf("\tsubq\n");
+                            printf("\tsubq\n"); // TODO: operands
                             break;
                         case '*':
-                            printf("\timulq\n");
+                            printf("\timulq\n"); // TODO: operands
                             break;
                         case '/':
-                            printf("\tdivq\n");
+                            printf("\tdivq\n"); // TODO: operands
                             break;
                         case '<': // TODO: cmpq & jlt?
                             printf("\tcompLT\n");
@@ -112,3 +112,34 @@ int ex(nodeType *p)
     }
     return 0;
 }
+
+// TODO: handle generated push instructions
+// generated code seem to always push variables before cmp/sub/call
+// * cmp needs two arguments in instruction (cmpq s2,s1)
+// * sub needs two arguments in instruction (subq S,D)
+// * call needs arguments in registers (rdi, rsi, ...)
+
+// * constant
+//       - "push"
+// * identifier
+//       - "push"
+// * operand
+//       * WHILE
+//       * IF
+//       * PRINT
+//       * FACT
+//       * LNTWO
+//       * UNARY MINUS
+//       * ASSIGN
+//       * default
+//             * GCD
+//             * SUB
+//             * ADD
+//             * MULT
+//             * DIV
+//             * LT
+//             * LE
+//             * GT
+//             * GE
+//             * NE
+//             * EQ
