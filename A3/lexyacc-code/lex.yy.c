@@ -469,7 +469,7 @@ char *yytext;
 #line 1 "calc3.l"
 #line 2 "calc3.l"
 #include <stdlib.h>
-#include "../calc3.h"
+#include "calc3.h"
 #include "y.tab.h"
 void yyerror(char *);
 #line 476 "lex.yy.c"

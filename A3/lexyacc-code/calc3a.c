@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include "calc3.h"
-#include "./lexyacc-code/y.tab.h"
+#include "y.tab.h"
 
 int ex(nodeType *p) {
     if (!p) return 0;

@@ -1,5 +1,11 @@
-in_filename=$1  
+in_filename=$1
 filename="output.s"
+
+usage() { echo -e "One argument expected (input calc file)\nUsage: $0 [filename]"; exit 1; }
+
+if [ $# -ne 1 ]; then
+	usage
+fi
 
 # Create prologue (.bss and .text segments)
 ALPHA="a b c d e f g h i j k l m n o p q r s t u v w x y z"
@@ -15,6 +21,7 @@ echo    "main:"             >> $filename
 # Command to parse calc file, and compile...
 
 # Executing with test file
+make all
 (./bin/calc3y.exe < $in_filename) >> $filename
 
 # Create epilogue
