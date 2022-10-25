@@ -10,6 +10,16 @@ Testa output från calc3b med `./bin/calc3b.exe < test`
 Skapa bibliotek genom att kompilera med `ar`
 Skapa en Makefile
 
+## How to
+
+- Call ./x86-64-driver.sh
+- `gcc -no-pie -fPIC assemblytest.s -o assemblytest`
+
+# To debug with gdb:
+- `gcc -g -no-pie -fPIC assemblytest.s -o assemblytest`
+- `gdb assemblytest`
+
+
 ## Todo list
 
 ### Grade D

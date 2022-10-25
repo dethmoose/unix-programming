@@ -14,10 +14,10 @@ int ex(nodeType *p)
     switch (p->type)
     {
         case typeCon:
-            printf("\tpushq\t$%d\n", p->con.value);
+            printf("\tmovq\t$%d, %%r9\n", p->con.value);
             break;
         case typeId:
-            printf("\tpushq\t%c\n", p->id.i + 'a');
+            // printf("\tpushq\t%c\n", p->id.i + 'a');
             break;
         case typeOpr:
             switch (p->opr.oper)
@@ -51,11 +51,14 @@ int ex(nodeType *p)
                     break;
                 case PRINT:
                     ex(p->opr.op[0]);
+                    // TODO: Fix print statement, I'm getting segfaults when running. Assuming this is fault
+                    printf("\tmovq\t%c, %%rsi\n", p->opr.op[0]->id.i + 'a');
                     printf("\tcall\tprintf\n");
                     break;
                 case '=':
                     ex(p->opr.op[1]);
-                    printf("\tpopq\t%c\n", p->opr.op[0]->id.i + 'a');
+                    printf("\tmovq\t%%r9, \t%c\n", p->opr.op[0]->id.i + 'a');
+                    // This is wrong in combination with operations like sub
                     break;
                 case UMINUS:
                     ex(p->opr.op[0]);
@@ -82,10 +85,10 @@ int ex(nodeType *p)
                             break;
                         case '-':
                             // a = a - b
-                            // movq b, %rdi
-                            // subq %rdi, a
-                            printf("\tmovq\t%c, %%rdi\n", p->opr.op[1]->id.i + 'a');
-                            printf("\tsubq\t%%rdi, %c\n", p->opr.op[0]->id.i + 'a'); // TODO: operands
+                            // movq b, %r10
+                            // subq %r10, a
+                            printf("\tmovq\t%c, %%r10\n", p->opr.op[1]->id.i + 'a');
+                            printf("\tsubq\t%%r10, %c\n", p->opr.op[0]->id.i + 'a'); // TODO: operands
                             break;
                         case '*':
                             printf("\timulq\n"); // TODO: operands
@@ -94,28 +97,33 @@ int ex(nodeType *p)
                             printf("\tdivq\n"); // TODO: operands
                             break;
                         case '<': // TODO: cmpq & jlt?
-                            printf("\tcmp\t%c, %c\n", p->opr.op[1]->id.i + 'a', p->opr.op[0]->id.i + 'a');
+                            printf("\tmovq\t%c, %%r10\n", p->opr.op[1]->id.i + 'a');
+                            printf("\tcmpq\t%%r10, %c\n", p->opr.op[0]->id.i + 'a');
                             printf("\tjl\tL%03d\n", lbl1 = lbl++);
                             break;
                         case '>': // cmpq & jgt?
-                            printf("\tcompGT\n");
+                            printf("\tmovq\t%c, %%r10\n", p->opr.op[1]->id.i + 'a');
+                            printf("\tcmpq\t%%r10, %c\n", p->opr.op[0]->id.i + 'a');
                             printf("\tjg\tL%03d\n", lbl1 = lbl++);
                             break;
                         case GE: // cmpq & jge?
-                            printf("\tcmp\t%c, %c\n", p->opr.op[1]->id.i + 'a', p->opr.op[0]->id.i + 'a');
+                            printf("\tmovq\t%c, %%r10\n", p->opr.op[1]->id.i + 'a');
+                            printf("\tcmpq\t%%r10, %c\n", p->opr.op[0]->id.i + 'a');
                             printf("\tjge\tL%03d\n", lbl1 = lbl++);
                             break;
                         case LE: // cmpq & jle?
-                            printf("\tcmp\t%c, %c\n", p->opr.op[1]->id.i + 'a', p->opr.op[0]->id.i + 'a');
+                            printf("\tmovq\t%c, %%r10\n", p->opr.op[1]->id.i + 'a');
+                            printf("\tcmpq\t%%r10, %c\n", p->opr.op[0]->id.i + 'a');
                             printf("\tjle\tL%03d\n", lbl1 = lbl++);
                             break;
                         case NE: // cmpq & jne?
-                            printf("\tmovq\t%c, %%rdi\n", p->opr.op[1]->id.i + 'a');
-                            printf("\tsubq\t%%rdi, %c\n", p->opr.op[0]->id.i + 'a');
+                            printf("\tmovq\t%c, %%r10\n", p->opr.op[1]->id.i + 'a');
+                            printf("\tcmpq\t%%r10, %c\n", p->opr.op[0]->id.i + 'a');
                             printf("\tjne\tL%03d\n", lbl1 = lbl++);
                             break;
                         case EQ: // cmpq & je?
-                            printf("\tcmp\t%c, %c\n", p->opr.op[1]->id.i + 'a', p->opr.op[0]->id.i + 'a');
+                            printf("\tmovq\t%c, %%r10\n", p->opr.op[1]->id.i + 'a');
+                            printf("\tcmpq\t%%r10, %c\n", p->opr.op[0]->id.i + 'a');
                             printf("\tje\tL%03d\n", lbl1 = lbl++);
                             break;
                     }
@@ -128,7 +136,7 @@ int ex(nodeType *p)
 // generated code seem to always push variables before cmp/sub/call
 // * cmp needs two arguments in instruction (cmpq s2,s1)
 // * sub needs two arguments in instruction (subq S,D)
-// * call needs arguments in registers (rdi, rsi, ...)
+// * call needs arguments in registers (r10, rsi, ...)
 
 // * constant
 //       - "push"
