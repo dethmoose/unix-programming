@@ -28,4 +28,6 @@ Skapa en Makefile
 
 -   Implement one additional function
 
+-   In calc3i.c, check union value of e.g. `p->opr.op[0]` (constant, identifier) to know whether to use `con->value (%d) id->i + 'a' (%c)`
+
 ## Questions
