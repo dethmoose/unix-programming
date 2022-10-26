@@ -1,3 +1,4 @@
+#!/usr/bin/bash
 in_filename=$1
 filename="output.s"
 
@@ -17,12 +18,13 @@ done
 echo -e "\n\t.text"         >> $filename
 echo -e "\t.global\tmain\n" >> $filename
 echo    "main:"             >> $filename
+echo -e "\tpushq\t\$0"       >> $filename
 
 # Command to parse calc file, and compile...
 
 # Executing with test file
 make all
-(./bin/calc3y.exe < $in_filename) >> $filename
+(./bin/calc3y.exe < $in_filename) >> $filename  
 
 # Create epilogue
 echo    "lExit:"             >> $filename
@@ -30,6 +32,7 @@ echo -e "\tmovq\t\$60,%rax"  >> $filename	# sys_exit has code 60
 echo -e "\txor\t\t%rdi,%rdi" >> $filename	# exit code 0
 echo -e "\tsyscall"          >> $filename
 
+# gcc -o $in_filename
 # TODO
 # Call ’gcc’ (or ’as’ and ’ld’ separately) to assemble
 # and link the assembly file to produce an executable

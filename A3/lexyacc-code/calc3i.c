@@ -51,7 +51,7 @@ int ex(nodeType *p)
                     break;
                 case PRINT:
                     ex(p->opr.op[0]);
-                    // TODO: Fix print statement, I'm getting segfaults when running. Assuming this is fault
+                    // TODO: Fix print statement, I'm getting segfaults when running. Assuming this is fault    
                     printf("\tmovq\t%c, %%rsi\n", p->opr.op[0]->id.i + 'a');
                     printf("\tcall\tprintf\n");
                     break;
@@ -73,6 +73,8 @@ int ex(nodeType *p)
                     printf("\tcall\tlntwo\n");
                     break;
                 default:
+                //    printf(".......%c.......",   p->opr.op[0]->id.i);
+                //    printf(".......%c.......",   p->opr.op[0]->id.i);
                     ex(p->opr.op[0]);
                     ex(p->opr.op[1]);
                     switch (p->opr.oper)
@@ -84,11 +86,15 @@ int ex(nodeType *p)
                             printf("\taddq\n"); // TODO: operands
                             break;
                         case '-':
-                            // a = a - b
-                            // movq b, %r10
-                            // subq %r10, a
                             printf("\tmovq\t%c, %%r10\n", p->opr.op[1]->id.i + 'a');
-                            printf("\tsubq\t%%r10, %c\n", p->opr.op[0]->id.i + 'a'); // TODO: operands
+                            if (p->opr.op[0]->id.i > 26) {
+                                printf("\tmovq\t%%r8, %%r10\n");
+                            }
+                            else {
+                                printf("\tsubq\t%%r10, %c\n", p->opr.op[0]->id.i + 'a'); // TODO: operands
+                                printf("\tmovq\t%c, %%r8\n", p->opr.op[0]->id.i + 'a'); // TODO: operands
+                            }
+                            
                             break;
                         case '*':
                             printf("\timulq\n"); // TODO: operands
