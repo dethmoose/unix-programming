@@ -142,29 +142,5 @@ int ex(nodeType *p)
 // generated code seem to always push variables before cmp/sub/call
 // * cmp needs two arguments in instruction (cmpq s2,s1)
 // * sub needs two arguments in instruction (subq S,D)
-// * call needs arguments in registers (r10, rsi, ...)
+// * call needs arguments in registers (rdi, rsi, ...)
 
-// * constant
-//       - "push"
-// * identifier
-//       - "push"
-// * operand
-//       * WHILE
-//       * IF
-//       * PRINT
-//       * FACT
-//       * LNTWO
-//       * UNARY MINUS
-//       * ASSIGN
-//       * default
-//             * GCD
-//             * SUB
-//             * ADD
-//             * MULT
-//             * DIV
-//             * LT
-//             * LE
-//             * GT
-//             * GE
-//             * NE
-//             * EQ

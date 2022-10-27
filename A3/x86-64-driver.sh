@@ -5,37 +5,39 @@ filename="output.s"
 usage() { echo -e "One argument expected (input calc file)\nUsage: $0 [filename]"; exit 1; }
 
 if [ $# -ne 1 ]; then
-	usage
+    usage
 fi
 
-# Create prologue (.bss and .text segments)
+# Create prologue (.bss, .data and .text segments)
 ALPHA="a b c d e f g h i j k l m n o p q r s t u v w x y z"
 echo -e "\t.bss" > $filename
 for a in $ALPHA
 do
     echo -e "$a:\t.quad\t0" >> $filename
 done
-echo -e "\n\t.text"         >> $filename
-echo -e "\t.global\tmain\n" >> $filename
-echo    "main:"             >> $filename
-echo -e "\tpushq\t\$0"       >> $filename
 
-# Command to parse calc file, and compile...
+echo -e "\n\t.data"             >> $filename
+echo -e "fmt:\t.asciz\t\"%d\""  >> $filename    # format str for printf
 
-# Executing with test file
+echo -e "\n\t.text"             >> $filename
+echo -e "\t.global\tmain\n"     >> $filename
+echo    "main:"                 >> $filename
+echo -e "\tpushq\t\$0"          >> $filename    # align stack
+
+# Executing with calc file
 make all
 (./bin/calc3y.exe < $in_filename) >> $filename  
 
-# Create epilogue
+# Create epilogue (could use `exit()` instead?)
 echo    "lExit:"             >> $filename
-echo -e "\tmovq\t\$60,%rax"  >> $filename	# sys_exit has code 60
-echo -e "\txor\t\t%rdi,%rdi" >> $filename	# exit code 0
+echo -e "\tmovq\t\$60,%rax"  >> $filename    # sys_exit has code 60
+echo -e "\txor\t\t%rdi,%rdi" >> $filename    # exit code 0
 echo -e "\tsyscall"          >> $filename
 
-# gcc -o $in_filename
 # TODO
 # Call ’gcc’ (or ’as’ and ’ld’ separately) to assemble
 # and link the assembly file to produce an executable
+# gcc -o $in_filename
 
 # Expected outcome:
 # For example, when I run your shell script as follows:
