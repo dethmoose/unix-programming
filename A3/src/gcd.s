@@ -1,5 +1,4 @@
 # Greatest Common Divisor
-# Take two arguments and return the gcd
 
     .text
     .global gcd

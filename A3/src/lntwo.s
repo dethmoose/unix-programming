@@ -1,5 +1,4 @@
 # Binary Logarithm
-# Take one argument and return the binary log
 
     .text
     .global lntwo

@@ -13,7 +13,7 @@ Write a shell script, called `x86-64-driver.sh`, which takes as input a file wit
 
 ### Test output from .exe file
 - `make`
-- `./bin/calc3y.exe < ./test`
+- `./bin/calc3i.exe < ./testprogs/test`
 
 ### Run output.s
 - `gcc -no-pie -fPIC output.s -o output`
@@ -24,7 +24,7 @@ Write a shell script, called `x86-64-driver.sh`, which takes as input a file wit
 - `gdb output`
 
 ### Create library `util`, or replace .s file in library
-- `ar -rsv ./lib/libutil.a ./src/filename.s`
+- `ar -crsv ./lib/libutil.a ./src/filename.s`
 
 ### List all modules within library
 - `ar -t ./lib/libutil.a`
@@ -36,5 +36,19 @@ Write a shell script, called `x86-64-driver.sh`, which takes as input a file wit
 -   Implement compiler for basic stack machine
 
 -   Implement one additional function
+
+### Grade C
+
+-   Implement the remaining two additional functions
+
+-   Implement all three additional functions as proper external library (lib.a linked with gcc/ld)
+
+### Grade B
+
+-   Use system calls instead of library functions (`printf`) to handle output
+
+### Grade A
+
+-   Implement the compiler for the C stack machine
 
 ## Questions
