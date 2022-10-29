@@ -11,10 +11,10 @@ int ex(nodeType *p) {
     if (!p) return 0;
     switch(p->type) {
     case typeCon:
-        printf("\tpushq\t$%d\n", p->con.value); 
+        printf("\tpushq\t$%d\n", p->con.value);
         break;
     case typeId:
-        printf("\tpushq\t%c\n", p->id.i + 'a'); 
+        printf("\tpushq\t%c\n", p->id.i + 'a');
         break;
     case typeOpr:
         switch(p->opr.oper) {
@@ -54,7 +54,9 @@ int ex(nodeType *p) {
             break;
         case UMINUS:
             ex(p->opr.op[0]);
-            printf("\tneg\n");
+            printf("\tpopq\t%%r8\n");
+            printf("\tnegq\t%%r8\n");
+            printf("\tpushq\t%%r8\n");
             break;
         case FACT:
             ex(p->opr.op[0]);
@@ -71,7 +73,7 @@ int ex(nodeType *p) {
             ex(p->opr.op[1]);
             switch(p->opr.oper) {
             case GCD:
-                // temp gcd for gcd.calc
+                // TODO: temp gcd for gcd.calc
                 printf("\tpopq\t%%rax\n");
                 printf("\tpopq\t%%rax\n");
                 printf("\tpushq\t$244\n");

@@ -16,31 +16,42 @@ do
     echo -e "$a:\t.quad\t0" >> $filename
 done
 
-echo -e "\n\t.data"             >> $filename
-echo -e "fmt:\t.asciz\t\"%d\""  >> $filename    # format str for printf
+echo -e "\n\t.data"                >> $filename
+echo -e "fmt:\t.asciz\t\"%d\\\n\"" >> $filename   # format str for printf
 
-echo -e "\n\t.text"             >> $filename
-echo -e "\t.global\tmain\n"     >> $filename
-echo    "main:"                 >> $filename
-echo -e "\tpushq\t\$0"          >> $filename    # align stack
+echo -e "\n\t.text"                >> $filename
+echo -e "\t.global\tmain\n"        >> $filename
 
-# Executing with calc file
+echo    "fact:"               >> $filename
+echo -e "\tcmpq\t\$1, %rdi"   >> $filename
+echo -e "\tjle\t\tbase"       >> $filename
+echo -e "\tpushq\t%rdi"       >> $filename
+echo -e "\tdecq\t%rdi"        >> $filename
+echo -e "\tcall\tfact"        >> $filename
+echo -e "\tpopq\t%rdi"        >> $filename
+echo -e "\timulq\t%rdi, %rax" >> $filename
+echo -e "\tret"               >> $filename
+echo    "base:"               >> $filename
+echo -e "\tmovq\t\$1, %rax"   >> $filename
+echo -e "\tret\n"             >> $filename
+
+echo    "main:"                    >> $filename
+echo -e "\tpushq\t\$0"             >> $filename   # align stack 16 bytes
+
+# Execute with calc file
 make all
 (./bin/calc3y.exe < $in_filename) >> $filename
 
-# Create epilogue (could use `exit()` instead?)
+# Create epilogue
 echo    "lExit:"             >> $filename
-echo -e "\tmovq\t\$60,%rax"  >> $filename    # sys_exit has code 60
-echo -e "\txor\t\t%rdi,%rdi" >> $filename    # exit code 0
+echo -e "\tmovq\t\$60,%rax"  >> $filename   # sys_exit has code 60
+echo -e "\txor\t\t%rdi,%rdi" >> $filename   # exit code 0
 echo -e "\tsyscall"          >> $filename
 
-gcc -no-pie -fPIC output.s ./src/fact.s -o output
+# Assemble and produce an executable
+# TODO: link lib
+gcc -no-pie -fPIC output.s -o output
 ./output
-
-# TODO
-# Call ’gcc’ (or ’as’ and ’ld’ separately) to assemble
-# and link the assembly file to produce an executable
-# gcc -o $in_filename
 
 # Expected outcome:
 # For example, when I run your shell script as follows:
@@ -48,3 +59,4 @@ gcc -no-pie -fPIC output.s ./src/fact.s -o output
 # ’bcd.s’, which contains the produced x86-64 assembler code for the
 # file ’bcd.calc’, as well as a file called ’bcd’, which is an
 # executable program, which does what was written in ’bcd.calc’.
+# TODO: change $filename to $in_filename without the file ending
