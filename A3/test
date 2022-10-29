@@ -1,12 +1,5 @@
-a=732;
-b=2684;
-while(a != b) {
-  if(a > b) {
-    a=a-b;
-  } else {
-    b=b-a;
-  }
+a=1;
+while(a < 10) {
+  print fact a;
+  a=a+1;
 }
-print a;
-
-print a gcd b;

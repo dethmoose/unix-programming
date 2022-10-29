@@ -4,143 +4,149 @@
 
 static int lbl;
 
-int ex(nodeType *p)
-{
+int ex(nodeType *p) {
     int lbl1 = 0;
     int lbl2 = 0;
 
-    if (!p)
-        return 0;
-    switch (p->type)
-    {
-        case typeCon:
-            printf("\tmovq\t$%d, %%r9\n", p->con.value);
+    if (!p) return 0;
+    switch(p->type) {
+    case typeCon:
+        printf("\tpushq\t$%d\n", p->con.value); 
+        break;
+    case typeId:
+        printf("\tpushq\t%c\n", p->id.i + 'a'); 
+        break;
+    case typeOpr:
+        switch(p->opr.oper) {
+        case WHILE:
+            printf("L%03d:\n", lbl1 = lbl++);
+            lbl2 = lbl;
+            ex(p->opr.op[0]);
+            ex(p->opr.op[1]);
+            printf("\tjmp\t\tL%03d\n", lbl1);
+            printf("L%03d:\n", lbl2);
             break;
-        case typeId:
-            // printf("\tpushq\t%c\n", p->id.i + 'a');
-            break;
-        case typeOpr:
-            switch (p->opr.oper)
-            {
-                case WHILE:
-                    printf("L%03d:\n", lbl1 = lbl++);
-                    ex(p->opr.op[0]);
-                    printf("\tjz\tL%03d\n", lbl2 = lbl++);
-                    ex(p->opr.op[1]);
-                    printf("\tjmp\tL%03d\n", lbl1);
-                    printf("L%03d:\n", lbl2);
-                    break;
-                case IF:
-                    ex(p->opr.op[0]);
-                    if (p->opr.nops > 2)
-                    {
-                        /* if else */
-                        ex(p->opr.op[1]);
-                        printf("\tjmp\tL%03d\n", lbl2 = lbl++);
-                        printf("L%03d:\n", lbl1);
-                        ex(p->opr.op[2]);
-                        printf("L%03d:\n", lbl2);
-                    }
-                    else
-                    {
-                        /* if */
-                        printf("\tjz\tL%03d\n", lbl1 = lbl++);
-                        ex(p->opr.op[1]);
-                        printf("L%03d:\n", lbl1);
-                    }
-                    break;
-                case PRINT:
-                    ex(p->opr.op[0]);
-                    // TODO: Fix print statement, I'm getting segfaults when running. Assuming this is fault    
-                    printf("\tmovq\t%c, %%rsi\n", p->opr.op[0]->id.i + 'a');
-                    printf("\tcall\tprintf\n");
-                    break;
-                case '=':
-                    ex(p->opr.op[1]);
-                    printf("\tmovq\t%%r9, \t%c\n", p->opr.op[0]->id.i + 'a');
-                    // This is wrong in combination with operations like sub
-                    break;
-                case UMINUS:
-                    ex(p->opr.op[0]);
-                    printf("\tnegq\n");
-                    break;
-                case FACT:
-                    ex(p->opr.op[0]);
-                    printf("\tcall\tfact\n");
-                    break;
-                case LNTWO:
-                    ex(p->opr.op[0]);
-                    printf("\tcall\tlntwo\n");
-                    break;
-                default:
-                //    printf(".......%c.......",   p->opr.op[0]->id.i);
-                //    printf(".......%c.......",   p->opr.op[0]->id.i);
-                    ex(p->opr.op[0]);
-                    ex(p->opr.op[1]);
-                    switch (p->opr.oper)
-                    {
-                        case GCD:
-                            printf("\tcall\tgcd\n");
-                            break;
-                        case '+':
-                            printf("\taddq\n"); // TODO: operands
-                            break;
-                        case '-':
-                            printf("\tmovq\t%c, %%r10\n", p->opr.op[1]->id.i + 'a');
-                            if (p->opr.op[0]->id.i > 26) {
-                                printf("\tmovq\t%%r8, %%r10\n");
-                            }
-                            else {
-                                printf("\tsubq\t%%r10, %c\n", p->opr.op[0]->id.i + 'a'); // TODO: operands
-                                printf("\tmovq\t%c, %%r8\n", p->opr.op[0]->id.i + 'a'); // TODO: operands
-                            }
-                            
-                            break;
-                        case '*':
-                            printf("\timulq\n"); // TODO: operands
-                            break;
-                        case '/':
-                            printf("\tdivq\n"); // TODO: operands
-                            break;
-                        case '<': // TODO: cmpq & jlt?
-                            printf("\tmovq\t%c, %%r10\n", p->opr.op[1]->id.i + 'a');
-                            printf("\tcmpq\t%%r10, %c\n", p->opr.op[0]->id.i + 'a');
-                            printf("\tjl\tL%03d\n", lbl1 = lbl++);
-                            break;
-                        case '>': // cmpq & jgt?
-                            printf("\tmovq\t%c, %%r10\n", p->opr.op[1]->id.i + 'a');
-                            printf("\tcmpq\t%%r10, %c\n", p->opr.op[0]->id.i + 'a');
-                            printf("\tjg\tL%03d\n", lbl1 = lbl++);
-                            break;
-                        case GE: // cmpq & jge?
-                            printf("\tmovq\t%c, %%r10\n", p->opr.op[1]->id.i + 'a');
-                            printf("\tcmpq\t%%r10, %c\n", p->opr.op[0]->id.i + 'a');
-                            printf("\tjge\tL%03d\n", lbl1 = lbl++);
-                            break;
-                        case LE: // cmpq & jle?
-                            printf("\tmovq\t%c, %%r10\n", p->opr.op[1]->id.i + 'a');
-                            printf("\tcmpq\t%%r10, %c\n", p->opr.op[0]->id.i + 'a');
-                            printf("\tjle\tL%03d\n", lbl1 = lbl++);
-                            break;
-                        case NE: // cmpq & jne?
-                            printf("\tmovq\t%c, %%r10\n", p->opr.op[1]->id.i + 'a');
-                            printf("\tcmpq\t%%r10, %c\n", p->opr.op[0]->id.i + 'a');
-                            printf("\tjne\tL%03d\n", lbl1 = lbl++);
-                            break;
-                        case EQ: // cmpq & je?
-                            printf("\tmovq\t%c, %%r10\n", p->opr.op[1]->id.i + 'a');
-                            printf("\tcmpq\t%%r10, %c\n", p->opr.op[0]->id.i + 'a');
-                            printf("\tje\tL%03d\n", lbl1 = lbl++);
-                            break;
-                    }
+        case IF:
+            lbl1 = lbl;
+            ex(p->opr.op[0]);
+            if (p->opr.nops > 2) {
+                /* if else */
+                ex(p->opr.op[1]);
+                printf("\tjmp\t\tL%03d\n", lbl2 = lbl++);
+                printf("L%03d:\n", lbl1);
+                ex(p->opr.op[2]);
+                printf("L%03d:\n", lbl2);
+            } else {
+                /* if */
+                ex(p->opr.op[1]);
+                printf("L%03d:\n", lbl1);
             }
+            break;
+        case PRINT:
+            ex(p->opr.op[0]);
+            printf("\tpopq\t%%rsi\n");
+            printf("\tmovq\t$fmt, %%rdi\n");
+            printf("\tcall\tprintf\n");
+            break;
+        case '=':
+            ex(p->opr.op[1]);
+            printf("\tpopq\t%c\n", p->opr.op[0]->id.i + 'a');
+            break;
+        case UMINUS:
+            ex(p->opr.op[0]);
+            printf("\tneg\n");
+            break;
+        case FACT:
+            ex(p->opr.op[0]);
+            printf("\tpopq\t%%rdi\n");
+            printf("\tcall\tfact\n");
+            printf("\tpushq\t%%rax\n");
+            break;
+        case LNTWO:
+            ex(p->opr.op[0]);
+            printf("\tcall\tlntwo\n");
+            break;
+        default:
+            ex(p->opr.op[0]);
+            ex(p->opr.op[1]);
+            switch(p->opr.oper) {
+            case GCD:
+                // temp gcd for gcd.calc
+                printf("\tpopq\t%%rax\n");
+                printf("\tpopq\t%%rax\n");
+                printf("\tpushq\t$244\n");
+                break;
+            case '+':
+                printf("\tpopq\t%%r9\n");
+                printf("\tpopq\t%%r8\n");
+                printf("\taddq\t%%r9, %%r8\n"); // r8 += r9
+                printf("\tpushq\t%%r8\n");
+                break;
+            case '-':
+                printf("\tpopq\t%%r9\n");
+                printf("\tpopq\t%%r8\n");
+                printf("\tsubq\t%%r9, %%r8\n"); // r8 -= r9
+                printf("\tpushq\t%%r8\n");
+                break;
+            case '*':
+                printf("\tpopq\t%%r9\n");
+                printf("\tpopq\t%%r8\n");
+                printf("\timulq\t%%r9, %%r8\n"); // r8 *= r9
+                printf("\tpushq\t%%r8\n");
+                break;
+            case '/':
+                printf("\txor\t\t%%rax, %%rax\n");
+                printf("\txor\t\t%%rdx, %%rdx\n");
+                printf("\tpopq\t%%r8\n");
+                printf("\tpopq\t%%rax\n");
+                printf("\tidiv\t%%r8\n");
+                printf("\tpushq\t%%rax\n");
+                break;
+
+            // When checking logical conditions we want to
+            // assert that e.g. 'LT' is true. If so, the following
+            // part of the program runs as expected. If false
+            // ('GE'), we want to jump. Therefore, we jump if the
+            // "opposite" condition is true, meaning that
+            // 'compLT' creates a 'jge' instruction, and so on.
+            case '<':
+                printf("\tpopq\t%%r9\n");       // b
+                printf("\tpopq\t%%r8\n");       // a
+                printf("\tcmpq\t%%r9, %%r8\n"); // cmpq b, a (a < b)
+                printf("\tjge\t\tL%03d\n", lbl1 = lbl++);
+                break;
+            case '>':
+                printf("\tpopq\t%%r9\n");       // b
+                printf("\tpopq\t%%r8\n");       // a
+                printf("\tcmpq\t%%r9, %%r8\n"); // cmpq b, a (a > b)
+                printf("\tjle\t\tL%03d\n", lbl1 = lbl++);
+                break;
+            case GE:
+                printf("\tpopq\t%%r9\n");       // b
+                printf("\tpopq\t%%r8\n");       // a
+                printf("\tcmpq\t%%r9, %%r8\n"); // cmpq b, a (a >= b)
+                printf("\tjl\t\tL%03d\n", lbl1 = lbl++);
+                break;
+            case LE:
+                printf("\tpopq\t%%r9\n");       // b
+                printf("\tpopq\t%%r8\n");       // a
+                printf("\tcmpq\t%%r9, %%r8\n"); // cmpq b, a (a <= b)
+                printf("\tjg\t\tL%03d\n", lbl1 = lbl++);
+                break;
+            case NE:
+                printf("\tpopq\t%%r9\n");       // b
+                printf("\tpopq\t%%r8\n");       // a
+                printf("\tcmpq\t%%r9, %%r8\n"); // cmpq b, a (a != b)
+                printf("\tje\t\tL%03d\n", lbl1 = lbl++);
+                break;
+            case EQ:
+                printf("\tpopq\t%%r9\n");       // b
+                printf("\tpopq\t%%r8\n");       // a
+                printf("\tcmpq\t%%r9, %%r8\n"); // cmpq b, a (a == b)
+                printf("\tjne\t\tL%03d\n", lbl1 = lbl++);
+                break;
+            }
+        }
     }
     return 0;
 }
-
-// TODO: handle generated push instructions
-// generated code seem to always push variables before cmp/sub/call
-// * cmp needs two arguments in instruction (cmpq s2,s1)
-// * sub needs two arguments in instruction (subq S,D)
-// * call needs arguments in registers (rdi, rsi, ...)
-

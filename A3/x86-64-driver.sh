@@ -26,13 +26,16 @@ echo -e "\tpushq\t\$0"          >> $filename    # align stack
 
 # Executing with calc file
 make all
-(./bin/calc3y.exe < $in_filename) >> $filename  
+(./bin/calc3y.exe < $in_filename) >> $filename
 
 # Create epilogue (could use `exit()` instead?)
 echo    "lExit:"             >> $filename
 echo -e "\tmovq\t\$60,%rax"  >> $filename    # sys_exit has code 60
 echo -e "\txor\t\t%rdi,%rdi" >> $filename    # exit code 0
 echo -e "\tsyscall"          >> $filename
+
+gcc -no-pie -fPIC output.s ./src/fact.s -o output
+./output
 
 # TODO
 # Call ’gcc’ (or ’as’ and ’ld’ separately) to assemble

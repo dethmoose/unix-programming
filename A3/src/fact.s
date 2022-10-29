@@ -15,7 +15,7 @@ fact:
     jle     base
     pushq   %rdi            # push arg to stack
     decq    %rdi
-    call    fac             # temp = fact of (n-1)
+    call    fact             # temp = fact of (n-1)
     popq    %rdi            # pop from stack
     imulq   %rdi,%rax       # return n*temp
     ret
