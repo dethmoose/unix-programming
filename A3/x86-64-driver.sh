@@ -22,6 +22,7 @@ echo -e "fmt:\t.asciz\t\"%d\\\n\"" >> $filename   # format str for printf
 echo -e "\n\t.text"                >> $filename
 echo -e "\t.global\tmain\n"        >> $filename
 
+echo    "# FACT"              >> $filename
 echo    "fact:"               >> $filename
 echo -e "\tcmpq\t\$1, %rdi"   >> $filename
 echo -e "\tjle\t\tbase"       >> $filename
@@ -35,8 +36,24 @@ echo    "base:"               >> $filename
 echo -e "\tmovq\t\$1, %rax"   >> $filename
 echo -e "\tret\n"             >> $filename
 
-echo    "main:"                    >> $filename
-echo -e "\tpushq\t\$0"             >> $filename   # align stack 16 bytes
+echo    "# GCD"              >> $filename
+echo    "gcd:"               >> $filename
+echo -e "\tcmpq\t%rsi, %rdi" >> $filename
+echo -e "\tje\t\tequal"      >> $filename
+echo -e "\tjl\t\trdiLess"    >> $filename
+echo -e "\tsubq\t%rsi, %rdi" >> $filename
+echo -e "\tjmp\t\tagain"     >> $filename
+echo    "rdiLess:"           >> $filename
+echo -e "\tsubq\t%rdi, %rsi" >> $filename
+echo    "again:"             >> $filename
+echo -e "\tjmp\t\tgcd"       >> $filename
+echo    "equal:"             >> $filename
+echo -e "\tmovq\t%rdi, %rax" >> $filename
+echo -e "\tret\n"            >> $filename
+
+echo    "# MAIN"       >> $filename
+echo    "main:"        >> $filename
+echo -e "\tpushq\t\$0" >> $filename   # align stack 16 bytes
 
 # Execute with calc file
 make all

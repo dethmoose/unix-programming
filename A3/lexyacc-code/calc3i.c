@@ -66,17 +66,19 @@ int ex(nodeType *p) {
             break;
         case LNTWO:
             ex(p->opr.op[0]);
+            printf("\tpopq\t%%rdi\n");
             printf("\tcall\tlntwo\n");
+            printf("\tpushq\t%%rax\n");
             break;
         default:
             ex(p->opr.op[0]);
             ex(p->opr.op[1]);
             switch(p->opr.oper) {
             case GCD:
-                // TODO: temp gcd for gcd.calc
-                printf("\tpopq\t%%rax\n");
-                printf("\tpopq\t%%rax\n");
-                printf("\tpushq\t$244\n");
+                printf("\tpopq\t%%rsi\n");
+                printf("\tpopq\t%%rdi\n");
+                printf("\tcall\tgcd\n");
+                printf("\tpushq\t%%rax\n");
                 break;
             case '+':
                 printf("\tpopq\t%%r9\n");
