@@ -3,6 +3,7 @@
 /* calc3d.c: Generation of the graph of the syntax tree */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "calc3.h"

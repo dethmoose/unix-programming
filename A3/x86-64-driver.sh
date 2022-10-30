@@ -79,11 +79,16 @@ make all
 
 # Create epilogue
 echo    "lExit:"             >> $out_filepath
+echo -e "\tpopq\t%rax"       >> $out_filepath   # pop stack align
 echo -e "\tmovq\t\$60,%rax"  >> $out_filepath   # sys_exit has code 60
 echo -e "\txor\t\t%rdi,%rdi" >> $out_filepath   # exit code 0
 echo -e "\tsyscall"          >> $out_filepath
 
 # Assemble and produce an executable
 # TODO: link lib
+# gcc -no-pie -fPIC -L ./lib -l util $out_filepath -o $out_filename
+# ld: ./lib/libutil.a: error adding symbols: archive has no index; run ranlib to add one
+# nm --print-armap ./lib/libutil.a 
+# nm: fact.s: file format not recognized
 gcc -no-pie -fPIC $out_filepath -o $out_filename
 $out_filename

@@ -2,8 +2,6 @@
 #include "calc3.h"
 #include "y.tab.h"
 
-// TODO: save important registers before using them, restore them
-
 static int lbl;
 
 int ex(nodeType *p) {
