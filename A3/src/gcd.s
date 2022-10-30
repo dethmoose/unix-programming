@@ -5,6 +5,14 @@
 
 # Input values in %rdi & %rsi, return value in %rax
 gcd:
+    cmpq    $0, %rsi
+    jge     rdiNeg
+    negq    %rsi
+rdiNeg:
+    cmpq    $0, %rdi
+    jge     start
+    negq    %rdi
+start:
     cmpq    %rsi, %rdi
     je      equal
     jl      rdiLess
@@ -13,7 +21,7 @@ gcd:
 rdiLess:
     subq    %rdi, %rsi
 again:
-    jmp     gcd
+    jmp     start
 equal:
     movq    %rdi, %rax
     ret
