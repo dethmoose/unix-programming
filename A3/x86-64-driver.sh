@@ -8,7 +8,6 @@
 # executable program, which does what was written in ’bcd.calc’.
 
 in_filepath=$1
-# in_filename=$(basename $1 ".calc")
 out_filename="./build/$(basename $1 ".calc")"
 out_filepath="$out_filename.s"
 
@@ -40,7 +39,7 @@ echo    "main:"        >> $out_filepath
 echo -e "\tpushq\t\$0" >> $out_filepath   # align stack 16 bytes
 
 # Execute with calc file
-make all && echo
+make all -s
 (./bin/calc3i.exe < $in_filepath) >> $out_filepath
 
 # Create epilogue
