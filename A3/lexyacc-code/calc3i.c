@@ -47,7 +47,6 @@ int ex(nodeType *p) {
             printf("\tpopq\t%%rsi\n");
             printf("\tmovq\t$fmt, %%rdi\n");
             printf("\tcall\tprintf\n");
-            // TODO: syscall instead of printf for higher grade
             break;
         case '=':
             ex(p->opr.op[1]);

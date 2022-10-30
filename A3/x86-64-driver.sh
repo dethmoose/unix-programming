@@ -1,21 +1,14 @@
 #!/usr/bin/bash
 
-# Expected outcome:
-# For example, when I run your shell script as follows:
-# ’x86-64-driver.sh bcd.calc’, I expect as output a file called
-# ’bcd.s’, which contains the produced x86-64 assembler code for the
-# file ’bcd.calc’, as well as a file called ’bcd’, which is an
-# executable program, which does what was written in ’bcd.calc’.
-
-in_filepath=$1
-out_filename="./build/$(basename $1 ".calc")"
-out_filepath="$out_filename.s"
-
 usage() { echo -e "One argument expected (input calc file)\nUsage: $0 [filename]"; exit 1; }
 
 if [ $# -ne 1 ]; then
     usage
 fi
+
+in_filepath=$1
+out_filename="./build/$(basename $1 ".calc")"
+out_filepath="$out_filename.s"
 
 # Create prologue (.bss, .data and .text segments)
 ALPHA="a b c d e f g h i j k l m n o p q r s t u v w x y z"

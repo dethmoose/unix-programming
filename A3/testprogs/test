@@ -1,11 +1,7 @@
-a=1;
-while(a < 10) {
-  print fact a;
-  a=a+1;
-}
+print lntwo 32;
+print lntwo 8;
+print lntwo 32 - lntwo 8;
 
-print -a;
-print 55 gcd 88;
-
-// b = lntwo 8;
-// print b;
+print fact 6;
+print 36 gcd 6;
+print fact 6 / 36 gcd 6;
