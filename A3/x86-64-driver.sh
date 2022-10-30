@@ -8,9 +8,8 @@
 # executable program, which does what was written in ’bcd.calc’.
 
 in_filepath=$1
-# TODO: change $in_filename to $in_filepath without the file ending
-in_filename="output"
-out_filename="./build/$in_filename"
+# in_filename=$(basename $1 ".calc")
+out_filename="./build/$(basename $1 ".calc")"
 out_filepath="$out_filename.s"
 
 usage() { echo -e "One argument expected (input calc file)\nUsage: $0 [filename]"; exit 1; }
