@@ -5,7 +5,7 @@ A2/mathserver/server
 A2/computed_results/*
 .vscode/*
 A3/bin/*
-~A3/bin/calc3i.exe
+!A3/bin/calc3i.exe
 A3/build/*
 A3/lexyacc-code/y.tab.o
 A3/lexyacc-code/lex.yy.o
