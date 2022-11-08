@@ -81,8 +81,20 @@ int main(int argc, char *argv[])
         char filename[60] = "../computed_results/";
         strcat(filename, strData);
 
-        // Open file with append. "a" functions as if calling open with O_CREAT | O_WRONLY | O_APPEND
-        FILE *fp = fopen(filename, "a");
+        recv_file(server_socket, filename);
+    }
+    exit(EXIT_SUCCESS);
+}
+
+void send_file(int sd, char *filename)
+{
+    
+}
+ 
+void recv_file(int sd, char filename[])
+{
+    // Open file with append. "a" functions as if calling open with O_CREAT | O_WRONLY | O_APPEND
+    FILE *fp = fopen(filename, "a");
         if (fp == NULL)
         {
             printf("Error opening file.\n");
@@ -94,7 +106,7 @@ int main(int argc, char *argv[])
         int recv_bytes; // How many bytes are recieved by call to recv().
         while (1)
         {
-            if ((recv_bytes = recv(server_socket, recvbuf, sizeof(recvbuf), 0)) == -1)
+            if ((recv_bytes = recv(sd, recvbuf, sizeof(recvbuf), 0)) == -1)
             {
                 perror("Error recieving output.");
             }
@@ -106,8 +118,6 @@ int main(int argc, char *argv[])
             }
         }
         fclose(fp);
-    }
-    exit(EXIT_SUCCESS);
 }
 
 void read_options(int argc, char *argv[])
@@ -149,3 +159,4 @@ int usage()
     printf("              [-h]          help\n");
     exit(EXIT_FAILURE);
 }
+

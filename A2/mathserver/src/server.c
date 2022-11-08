@@ -68,6 +68,49 @@ int main(int argc, char *argv[])
     return 0;
 }
 
+void recv_file(int sd, char filename[])
+{
+    // Open file with append. "a" functions as if calling open with O_CREAT | O_WRONLY | O_APPEND
+    FILE *fp = fopen(filename, "a");
+        if (fp == NULL)
+        {
+            printf("Error opening file.\n");
+            exit(EXIT_FAILURE);
+        }
+
+        char recvbuf[255] = "";
+        memset(recvbuf, 0, sizeof(recvbuf));
+        int recv_bytes; // How many bytes are recieved by call to recv().
+        while (1)
+        {
+            if ((recv_bytes = recv(sd, recvbuf, sizeof(recvbuf), 0)) == -1)
+            {
+                perror("Error recieving output.");
+            }
+            else if (strstr(recvbuf, "\nOutput End\n") != NULL) { break; }
+            else
+            {
+                // Writes recv_bytes number of bytes from recvbuf to file.
+                fwrite(recvbuf, sizeof(char), recv_bytes, fp);
+            }
+        }
+        fclose(fp);
+}
+
+void parse_command(int sd, char command[])
+{
+    char *ptr = strtok(command, " ");
+    while (ptr != NULL)
+    {
+        if (strcmp(ptr, "-f") == 0){
+            ptr = strtok(NULL, " ");
+            recv_file(sd, ptr); 
+            break;
+        }
+        ptr = strtok(NULL, " ");
+    }
+}
+
 void kmeans_run(int sockfd, char command[])
 {
     // TODO: Read and parse command
