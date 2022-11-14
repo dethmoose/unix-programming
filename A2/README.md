@@ -17,15 +17,6 @@ Assignment 2 second deadline: 2022-12-05.
 
 * Separate machines: make sure output files are generated correctly
 
-* Kmeans calculate N (number of datapoints) in supplied input file
-  * replace kmeans `read_data` for-loop with while-loop reading file until EOF?
-  * try-catch to handle empty lines, invalid lines
-```C
-for (c = getc(fp); c != EOF; c = getc(fp))
-    if (c == '\n') // Increment count if this character is newline
-        count = count + 1;
-```
-
 * Handle arguments for kmeans and matinv such as -f
   * If -f is supplied, client should start sending file, and server should start recieving file.
   * Server should use this file to run program with.

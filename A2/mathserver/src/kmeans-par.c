@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <stdbool.h>
+#include <string.h>
 #include <limits.h>
 #include <pthread.h>
 
@@ -28,7 +29,7 @@ typedef struct point
     int cluster; // The cluster that the point belongs to
 } point;
 
-int N = 1797;                // number of entries in the data
+int N = 0;                   // number of entries in the data
 int k = 9;                   // number of centroids
 point data[MAX_POINTS];      // Data coordinates
 point cluster[MAX_CLUSTERS]; // The coordinates of each cluster center (also called centroid)
@@ -38,7 +39,7 @@ point temp[MAX_CLUSTERS] = {{0.0}};
 
 char default_filename[22] = "./src/kmeans-data.txt";
 char *filename = default_filename;
-char default_results_path[41] = "./../computed_results/kmeans-results.txt"; 
+char default_results_path[41] = "./../computed_results/kmeans-results.txt";
 char *results_path = default_results_path;
 bool somechange = false;
 
@@ -46,6 +47,7 @@ void *child(void *params);
 
 void read_data()
 {
+    char line[256];
     FILE *fp = fopen(filename, "r");
     if (fp == NULL)
     {
@@ -53,25 +55,21 @@ void read_data()
         exit(EXIT_FAILURE);
     }
 
-    // N depends on the number of entries in the input data file
-    if (strcmp(filename, default_filename) != 0)
+    // Initialize points from the data file
+    while (fgets(line, sizeof(line), fp))
     {
-        // TODO: set N to number of non-empty lines in filename
+        if (!isspace(line[0])) // Lines cannot start with whitespace
+        {
+            char data_buf[256] = {0};
+            strncpy(data_buf, line, strlen(line) - 2);         // Copy everything except trailing '\n\0'
+            sscanf(data_buf, "%f %f", &data[N].x, &data[N].y); // Save to data array
+            data[N].cluster = -1;                              // Initialize the cluster number to -1
+            N++;
+        }
     }
     if (N > MAX_POINTS)
     {
         N = MAX_POINTS;
-    }
-    else if (N < 0)
-    {
-        N = 0;
-    }
-
-    // Initialize points from the data file
-    for (int i = 0; i < N; i++)
-    {
-        fscanf(fp, "%f %f", &data[i].x, &data[i].y);
-        data[i].cluster = -1; // Initialize the cluster number to -1
     }
     printf("Read the problem data!\n");
 
