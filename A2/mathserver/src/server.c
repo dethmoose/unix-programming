@@ -85,7 +85,7 @@ void recv_file(int sd, char filename[])
         {
             if ((recv_bytes = recv(sd, recvbuf, sizeof(recvbuf), 0)) == -1)
             {
-                perror("Error recieving output.");
+                perror("Error recieving file.");
             }
             else if (strstr(recvbuf, "\nOutput End\n") != NULL) { break; }
             else
@@ -95,6 +95,21 @@ void recv_file(int sd, char filename[])
             }
         }
         fclose(fp);
+}
+
+void send_file(FILE* fp, int sd)
+{
+    char output[255] = "";
+    memset(output, 0, sizeof(output));
+    while (fgets(output, sizeof(output), fp) != NULL)
+    {
+        if ((send(sd, output, strlen(output), 0)) == -1)
+        {
+            perror("Error sending file.\n");
+            break;
+        }
+        memset(output, 0, sizeof(output));
+    }
 }
 
 void parse_command(int sd, char command[])
@@ -122,6 +137,8 @@ void kmeans_run(int sockfd, char command[])
     char client[10];
     snprintf(client, sizeof(client), "client%d", client_num);
     strncat(path, client, sizeof(path));
+
+    printf("%s\n", path); // /home/ollekd/unix/unix-programming/A2/mathserver/../computed_results/client1
     
     struct stat st = {0};
 
@@ -130,10 +147,15 @@ void kmeans_run(int sockfd, char command[])
         mkdir(path, 0666);
     }
 
+    // Is this string correct? command
+    printf("%s\n", command); // /home/ollekd/unix/unix-programming/A2/mathserver/kmeans
+
     // pclose will block until the process opened by popen terminates.
     FILE *fp = popen(command, "r");
+    // TODO: Should the kmeans-par.c take an argument and save the resutls in 'path'
     pclose(fp);
 
+    // This is the biggest problem right now
     // TODO handle input file
     // concat path with results filename
 
@@ -148,29 +170,19 @@ void kmeans_run(int sockfd, char command[])
     }
 }
 
-void matinv_run(int sockfd, char command[])
+void matinv_run(int sd, char command[])
 {
-    char output[255] = "";
-    memset(output, 0, sizeof(output));
+
 
     // I just realized that giving popen direct user input is super unsafe, but this isn't a course on infosec so... Don't abuse?
     FILE *fp = popen(command, "r");
-    while (fgets(output, sizeof(output), fp) != NULL)
-    {
-        // printf(output);
-        if ((send(sockfd, output, strlen(output), 0)) == -1)
-        {
-            perror("Error sending command output.\n");
-            break;
-        }
-        memset(output, 0, sizeof(output));
-    }
+    send_file(fp, sd);
     pclose(fp);
 
-    if ((send(sockfd, "\nOutput End\n", strlen("\nOutput End\n"), 0)) == -1)
+    if ((send(sd, "\nOutput End\n", strlen("\nOutput End\n"), 0)) == -1)
     {
         if (errno == EPIPE)
-            close(sockfd);
+            close(sd);
         else 
             perror("Error sending FIN command");
     }

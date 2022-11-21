@@ -86,9 +86,33 @@ int main(int argc, char *argv[])
     exit(EXIT_SUCCESS);
 }
 
-void send_file(int sd, char *filename)
+void parse_command(int sd, char command[])
 {
-    
+    char *ptr = strtok(command, " ");
+    while (ptr != NULL)
+    {
+        if (strcmp(ptr, "-f") == 0){
+            ptr = strtok(NULL, " ");
+            send_file(sd, ptr); 
+            break;
+        }
+        ptr = strtok(NULL, " ");
+    }
+}
+
+void send_file(FILE* fp, int sd)
+{
+    char output[255] = "";
+    memset(output, 0, sizeof(output));
+    while (fgets(output, sizeof(output), fp) != NULL)
+    {
+        if ((send(sd, output, strlen(output), 0)) == -1)
+        {
+            perror("Error sending file.\n");
+            break;
+        }
+        memset(output, 0, sizeof(output));
+    }
 }
  
 void recv_file(int sd, char filename[])
@@ -108,7 +132,7 @@ void recv_file(int sd, char filename[])
         {
             if ((recv_bytes = recv(sd, recvbuf, sizeof(recvbuf), 0)) == -1)
             {
-                perror("Error recieving output.");
+                perror("Error recieving file.");
             }
             else if (strstr(recvbuf, "\nOutput End\n") != NULL) { break; }
             else
