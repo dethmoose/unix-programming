@@ -4,6 +4,7 @@
 #include <netinet/in.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <string.h>
 
 // TODO: kmeans send data to server with -f filename option
 
@@ -21,14 +22,14 @@ int main(int argc, char *argv[])
         usage();
     read_options(argc, argv);
 
-    if (port == -1) 
+    if (port == -1)
     {
         printf("Error: No port assigned\n");
         usage();
     }
 
-    int server_socket = socket(AF_INET, SOCK_STREAM, 0);
-    if (server_socket == -1)
+    int sd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sd == -1)
     {
         printf("Socket creation failed.\n");
         exit(EXIT_FAILURE);
@@ -42,7 +43,7 @@ int main(int argc, char *argv[])
     else
         server_address.sin_addr.s_addr = INADDR_ANY;
 
-    int connect_status = connect(server_socket, (struct sockaddr *)&server_address, sizeof(server_address));
+    int connect_status = connect(sd, (struct sockaddr *)&server_address, sizeof(server_address));
 
     if (connect_status == -1)
     {
@@ -55,11 +56,11 @@ int main(int argc, char *argv[])
         char strData[255];
         printf("Enter a command for the server: ");
         fgets(strData, 255, stdin);
-        strData[strlen(strData) - 1] = '\0'; // Remove newline from command 
+        strData[strlen(strData) - 1] = '\0'; // Remove newline from command
 
         /* TODO:
         Check here if the strData from input is either a kmeans or matinv command.
-        Reason is that the server sends an error message, but the client is actually 
+        Reason is that the server sends an error message, but the client is actually
         waiting to recieve the information for the file to be created, and instead of a
         proper filename, it instead opens a file called "Error: ..."
 
@@ -67,21 +68,22 @@ int main(int argc, char *argv[])
         */
 
 
-       
-        if ((send(server_socket, strData, strlen(strData) + 1, 0)) == -1)
+        if ((send(sd, strData, strlen(strData) + 1, 0)) == -1)
         {
             perror("Error sending command.");
         }
 
-        // If -f flag is set, open filename and send data to server.
 
         // Recieve filename from server.
-        recv(server_socket, strData, sizeof(strData), 0);
+        recv(sd, strData, sizeof(strData), 0);
         printf("Received the solution: %s\n", strData);
-        char filename[60] = "../computed_results/";
+        char filename[60] = "../client_results/";
         strcat(filename, strData);
 
-        recv_file(server_socket, filename);
+        // If -f flag is set, open filename and send data to server.
+        parse_command(sd, strData);
+
+        recv_file(sd, filename);
     }
     exit(EXIT_SUCCESS);
 }
@@ -91,16 +93,19 @@ void parse_command(int sd, char command[])
     char *ptr = strtok(command, " ");
     while (ptr != NULL)
     {
-        if (strcmp(ptr, "-f") == 0){
+        if (strcmp(ptr, "-f") == 0)
+        {
             ptr = strtok(NULL, " ");
-            send_file(sd, ptr); 
+            FILE *fp = fopen(ptr, "r");
+            send_file(fp, sd);
+            fclose(fp);
             break;
         }
         ptr = strtok(NULL, " ");
     }
 }
 
-void send_file(FILE* fp, int sd)
+void send_file(FILE *fp, int sd)
 {
     char output[255] = "";
     memset(output, 0, sizeof(output));
@@ -113,35 +118,46 @@ void send_file(FILE* fp, int sd)
         }
         memset(output, 0, sizeof(output));
     }
+
+    if ((send(sd, "\nOutput End\n", strlen("\nOutput End\n"), 0)) == -1)
+    {
+        if (errno == EPIPE)
+            close(sd);
+        else
+            perror("Error sending FIN command");
+    }
 }
- 
+
 void recv_file(int sd, char filename[])
 {
     // Open file with append. "a" functions as if calling open with O_CREAT | O_WRONLY | O_APPEND
     FILE *fp = fopen(filename, "a");
-        if (fp == NULL)
+    if (fp == NULL)
+    {
+        printf("Error opening file.\n");
+        exit(EXIT_FAILURE);
+    }
+    
+    char recvbuf[255] = "";
+    memset(recvbuf, 0, sizeof(recvbuf));
+    int recv_bytes; // How many bytes are recieved by call to recv().
+    while (1)
+    {
+        if ((recv_bytes = recv(sd, recvbuf, sizeof(recvbuf), 0)) == -1)
         {
-            printf("Error opening file.\n");
-            exit(EXIT_FAILURE);
+            perror("Error recieving file.");
         }
-
-        char recvbuf[255] = "";
-        memset(recvbuf, 0, sizeof(recvbuf));
-        int recv_bytes; // How many bytes are recieved by call to recv().
-        while (1)
+        else if (strstr(recvbuf, "\nOutput End\n") != NULL)
         {
-            if ((recv_bytes = recv(sd, recvbuf, sizeof(recvbuf), 0)) == -1)
-            {
-                perror("Error recieving file.");
-            }
-            else if (strstr(recvbuf, "\nOutput End\n") != NULL) { break; }
-            else
-            {
-                // Writes recv_bytes number of bytes from recvbuf to file.
-                fwrite(recvbuf, sizeof(char), recv_bytes, fp);
-            }
+            break;
         }
-        fclose(fp);
+        else
+        {
+            // Writes recv_bytes number of bytes from recvbuf to file.
+            fwrite(recvbuf, sizeof(char), recv_bytes, fp);
+        }
+    }
+    fclose(fp);
 }
 
 void read_options(int argc, char *argv[])
@@ -183,4 +199,3 @@ int usage()
     printf("              [-h]          help\n");
     exit(EXIT_FAILURE);
 }
-

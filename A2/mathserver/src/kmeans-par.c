@@ -127,7 +127,7 @@ int read_options(int argc, char *argv[])
                     printf("\nUsage: kmeans\n");
                     printf("                [-f filename]    input data file\n");
                     printf("                [-k clusters]    number of clusters\n");
-                    printf("                [-p path]        path and filename for results\n");
+                    // printf("                [-p path]        path and filename for results\n");
                     break;
             }
         }

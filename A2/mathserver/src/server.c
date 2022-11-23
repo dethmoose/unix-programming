@@ -57,12 +57,12 @@ int main(int argc, char *argv[])
         case FORK:
             run_with_fork();
             break;
-        case MUXBASIC:
-            run_with_muxbasic();
-            break;
-        case MUXSCALE:
-            run_with_muxscale();
-            break;
+        // case MUXBASIC:
+        //     run_with_muxbasic();
+        //     break;
+        // case MUXSCALE:
+        //     run_with_muxscale();
+        //     break;
     }
 
     return 0;
@@ -72,29 +72,29 @@ void recv_file(int sd, char filename[])
 {
     // Open file with append. "a" functions as if calling open with O_CREAT | O_WRONLY | O_APPEND
     FILE *fp = fopen(filename, "a");
-        if (fp == NULL)
-        {
-            printf("Error opening file.\n");
-            exit(EXIT_FAILURE);
-        }
+    if (fp == NULL)
+    {
+        printf("Error opening file.\n");
+        exit(EXIT_FAILURE);
+    }
 
-        char recvbuf[255] = "";
-        memset(recvbuf, 0, sizeof(recvbuf));
-        int recv_bytes; // How many bytes are recieved by call to recv().
-        while (1)
+    char recvbuf[255] = "";
+    memset(recvbuf, 0, sizeof(recvbuf));
+    int recv_bytes; // How many bytes are recieved by call to recv().
+    while (1)
+    {
+        if ((recv_bytes = recv(sd, recvbuf, sizeof(recvbuf), 0)) == -1)
         {
-            if ((recv_bytes = recv(sd, recvbuf, sizeof(recvbuf), 0)) == -1)
-            {
-                perror("Error recieving file.");
-            }
-            else if (strstr(recvbuf, "\nOutput End\n") != NULL) { break; }
-            else
-            {
-                // Writes recv_bytes number of bytes from recvbuf to file.
-                fwrite(recvbuf, sizeof(char), recv_bytes, fp);
-            }
+            perror("Error recieving file.");
         }
-        fclose(fp);
+        else if (strstr(recvbuf, "\nOutput End\n") != NULL) { break; }
+        else
+        {
+            // Writes recv_bytes number of bytes from recvbuf to file.
+            fwrite(recvbuf, sizeof(char), recv_bytes, fp);
+        }
+    }
+    fclose(fp);
 }
 
 void send_file(FILE* fp, int sd)
@@ -110,75 +110,6 @@ void send_file(FILE* fp, int sd)
         }
         memset(output, 0, sizeof(output));
     }
-}
-
-void parse_command(int sd, char command[])
-{
-    char *ptr = strtok(command, " ");
-    while (ptr != NULL)
-    {
-        if (strcmp(ptr, "-f") == 0){
-            ptr = strtok(NULL, " ");
-            recv_file(sd, ptr); 
-            break;
-        }
-        ptr = strtok(NULL, " ");
-    }
-}
-
-void kmeans_run(int sockfd, char command[])
-{
-    // TODO: Read and parse command
-
-    // Create the directory for client results
-    char path[1024];
-    strncpy(path, cwd, sizeof(path));
-    strncat(path, "/../computed_results/", sizeof(path));
-    char client[10];
-    snprintf(client, sizeof(client), "client%d", client_num);
-    strncat(path, client, sizeof(path));
-
-    printf("%s\n", path); // /home/ollekd/unix/unix-programming/A2/mathserver/../computed_results/client1
-    
-    struct stat st = {0};
-
-    // Create dir if not exist
-    if (stat(path, &st) == -1) {
-        mkdir(path, 0666);
-    }
-
-    // Is this string correct? command
-    printf("%s\n", command); // /home/ollekd/unix/unix-programming/A2/mathserver/kmeans
-
-    // pclose will block until the process opened by popen terminates.
-    FILE *fp = popen(command, "r");
-    // TODO: Should the kmeans-par.c take an argument and save the resutls in 'path'
-    pclose(fp);
-
-    // This is the biggest problem right now
-    // TODO handle input file
-    // concat path with results filename
-
-    // fopen and start sending data to client.
-
-    if ((send(sockfd, "\nOutput End\n", strlen("\nOutput End\n"), 0)) == -1)
-    {
-        if (errno == EPIPE)
-            close(sockfd);
-        else 
-            perror("Error sending FIN command");
-    }
-}
-
-void matinv_run(int sd, char command[])
-{
-
-
-    // I just realized that giving popen direct user input is super unsafe, but this isn't a course on infosec so... Don't abuse?
-    FILE *fp = popen(command, "r");
-    send_file(fp, sd);
-    pclose(fp);
-
     if ((send(sd, "\nOutput End\n", strlen("\nOutput End\n"), 0)) == -1)
     {
         if (errno == EPIPE)
@@ -186,6 +117,78 @@ void matinv_run(int sd, char command[])
         else 
             perror("Error sending FIN command");
     }
+}
+
+int parse_command(int sd, char command[])
+{
+    char *ptr = strtok(command, " ");
+    while (ptr != NULL)
+    {
+        if (strcmp(ptr, "-f") == 0)
+        {
+            return 1;
+        }
+        ptr = strtok(NULL, " ");
+    }
+    return 0;
+}
+
+void kmeans_run(int sd, char command[], size_t size)
+{
+    // Create the directory for client results
+    char path[1024];
+    strncpy(path, cwd, sizeof(path));
+    strncat(path, "/../computed_results/", strlen(path) - sizeof(path));
+    char client[10];
+    snprintf(client, sizeof(client), "client%d", client_num);
+    strncat(path, client, strlen(path) - sizeof(path));
+
+    struct stat st = {0};
+    // Create dir if not exist
+    if (stat(path, &st) == -1) {
+        // umask(0000);
+        mkdir(path, 0777);
+    }
+
+    int inp = parse_command(sd, command);
+    if (inp == 1) {
+        char input_path[1024];
+        snprintf(input_path, sizeof(input_path), "%s/input.txt", path);
+        recv_file(sd, input_path); 
+        strncat(command, " -f ", size - strlen(command));
+        strncat(command, input_path, size - strlen(command));
+    }
+
+    char solution_str[20];
+    snprintf(solution_str, sizeof(solution_str), "/%d.txt", solution_num);
+    strncat(path, solution_str, strlen(path) - sizeof(path));
+
+    // Is this string correct? command
+    strncat(command, " -p ", size - strlen(command));
+    strncat(command, path, size - strlen(command));
+
+    // pclose will block until the process opened by popen terminates.
+    FILE *fp = popen(command, "r");
+    pclose(fp);
+
+    // concat path with results filename
+    // fopen and start sending data to client.
+    FILE *result = fopen(path, "r");
+    if (result == NULL)
+    {
+        perror("Error opening file.");
+    }
+    send_file(result, sd);
+    fclose(result);
+}
+
+void matinv_run(int sd, char command[])
+{
+    // I just realized that giving popen direct user input is super unsafe, but this isn't a course on infosec so... Don't abuse?
+    FILE *fp = popen(command, "r");
+    send_file(fp, sd);
+    pclose(fp);
+
 }
 
 // Code by Advanced Programming in the UNIX® Environment: Second Edition - Stevens & Rago
@@ -323,10 +326,7 @@ void run_with_fork()
                 printf("Client %d commanded: %s\n", client_num, msg);
 
                 char cmd[7];
-                // cmd = validate_command(msg); // TODO validate function
                 // start recieving client data for kmeans. save as filename kmeans-results_clientnum_solnum.txt
-
-                // validate command
                 snprintf(cmd, sizeof(cmd), "%.6s", msg); // 6 first chars
 
                 if (strcmp(cmd, "matinv") != 0 && strcmp(cmd, "kmeans") != 0)
@@ -352,16 +352,16 @@ void run_with_fork()
                 strncat(command, &delimiter, 1);
                 strcat(command, msg);
 
-                // TODO: 
                 // Here, either run kmeans_run or matinv_run based on msg.
                 if (strcmp(cmd, "kmeans") == 0)
                 {
-                    kmeans_run(client_socket, command);
+                    kmeans_run(client_socket, command, sizeof(command));
                 }
                 else if (strcmp(cmd, "matinv") == 0)
                 {
                     matinv_run(client_socket, command);
                 }
+
             }
         }
     }
@@ -369,213 +369,213 @@ void run_with_fork()
 
 // TODO: For grade B, "-s muxbasic"
 // https://www.ibm.com/docs/en/i/7.2?topic=designs-using-poll-instead-select
-void run_with_muxbasic()
-{
-    int len, rc, on = 1;
-    int listen_sock = -1;
-    int new_sock = -1;
-    int desc_ready, end_server = 0, compress_array = 0;
-    int close_conn;
-    char buffer[80];
+// void run_with_muxbasic()
+// {
+//     int len, rc, on = 1;
+//     int listen_sock = -1;
+//     int new_sock = -1;
+//     int desc_ready, end_server = 0, compress_array = 0;
+//     int close_conn;
+//     char buffer[80];
 
-    struct sockaddr_in addr;
+//     struct sockaddr_in addr;
 
-    int timeout;
+//     int timeout;
     
-    struct pollfd fds[200];
+//     struct pollfd fds[200];
 
-    int nfds = 1, current_size = 0, i, j;
+//     int nfds = 1, current_size = 0, i, j;
 
-    listen_sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (listen_sock < 0){
-        perror("Socket failed.\n");
-        exit(EXIT_FAILURE);
-    }
+//     listen_sock = socket(AF_INET, SOCK_STREAM, 0);
+//     if (listen_sock < 0){
+//         perror("Socket failed.\n");
+//         exit(EXIT_FAILURE);
+//     }
 
-    // Sets socket to be reusable
-    rc = setsockopt(listen_sock, SOL_SOCKET, SO_REUSEADDR, (char *) &on, sizeof(on));
-    if (rc < 0) {
-        perror("Set socket options failed.\n");
-        close(listen_sock);
-        exit(EXIT_FAILURE);
-    }
+//     // Sets socket to be reusable
+//     rc = setsockopt(listen_sock, SOL_SOCKET, SO_REUSEADDR, (char *) &on, sizeof(on));
+//     if (rc < 0) {
+//         perror("Set socket options failed.\n");
+//         close(listen_sock);
+//         exit(EXIT_FAILURE);
+//     }
 
-    rc = ioctl(listen_sock, FIONBIO, (char *) &on);
-    if (rc < 0) {
-        perror("IO control failed.\n");
-        close(listen_sock);
-        exit(EXIT_FAILURE);
-    }
+//     rc = ioctl(listen_sock, FIONBIO, (char *) &on);
+//     if (rc < 0) {
+//         perror("IO control failed.\n");
+//         close(listen_sock);
+//         exit(EXIT_FAILURE);
+//     }
 
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = INADDR_ANY;
-    addr.sin_port = htons(port);
+//     memset(&addr, 0, sizeof(addr));
+//     addr.sin_family = AF_INET;
+//     addr.sin_addr.s_addr = INADDR_ANY;
+//     addr.sin_port = htons(port);
 
-    rc = bind(listen_sock, (struct sockaddr *) &addr, sizeof(addr));
-    if (rc < 0) {
-        perror("Bind failed.\n");
-        close(listen_sock);
-        exit(EXIT_FAILURE);
-    }
+//     rc = bind(listen_sock, (struct sockaddr *) &addr, sizeof(addr));
+//     if (rc < 0) {
+//         perror("Bind failed.\n");
+//         close(listen_sock);
+//         exit(EXIT_FAILURE);
+//     }
     
-    // Listen to descriptor and set queue to 16.
-    rc = listen(listen_sock, 16);
-    if (rc < 0) {
-        perror("Listen failed.");
-        close(listen_sock);
-        exit(EXIT_FAILURE);
-    }
+//     // Listen to descriptor and set queue to 16.
+//     rc = listen(listen_sock, 16);
+//     if (rc < 0) {
+//         perror("Listen failed.");
+//         close(listen_sock);
+//         exit(EXIT_FAILURE);
+//     }
 
-    memset(fds, 0, sizeof(fds));
+//     memset(fds, 0, sizeof(fds));
 
-    fds[0].fd = listen_sock;
-    fds[0].events = POLLIN;
+//     fds[0].fd = listen_sock;
+//     fds[0].events = POLLIN;
 
-    // Do we need timeout???
-    timeout = (5 * 60 * 1000);
+//     // Do we need timeout???
+//     timeout = (5 * 60 * 1000);
 
-    do
-    {
-        printf("Polling for client...\n");
+//     do
+//     {
+//         printf("Polling for client...\n");
 
-        rc = poll(fds, nfds, timeout);
+//         rc = poll(fds, nfds, timeout);
 
-        if (rc < 0) {
-            perror("Poll failed.");
-            break;
-        }
+//         if (rc < 0) {
+//             perror("Poll failed.");
+//             break;
+//         }
 
-        if (rc == 0) {
-            printf("Poll timed out. \n");
-            break;
-        }
+//         if (rc == 0) {
+//             printf("Poll timed out. \n");
+//             break;
+//         }
 
-        current_size = nfds;
-        for (i = 0; i < current_size; i++) {
-            if (fds[i].revents == 0) {
-                continue;
-            }
-            if (fds[i].revents != POLLIN) {
-                printf("Error, revents.\n");
-                end_server = 1;
-                break;
-            }
-            if (fds[i].fd == listen_sock) {
-                do 
-                {
-                    new_sock = accept(listen_sock, NULL, NULL);
+//         current_size = nfds;
+//         for (i = 0; i < current_size; i++) {
+//             if (fds[i].revents == 0) {
+//                 continue;
+//             }
+//             if (fds[i].revents != POLLIN) {
+//                 printf("Error, revents.\n");
+//                 end_server = 1;
+//                 break;
+//             }
+//             if (fds[i].fd == listen_sock) {
+//                 do 
+//                 {
+//                     new_sock = accept(listen_sock, NULL, NULL);
 
-                    /* This error-catch should exclude EWOULDBLOCK since 
-                        if this error is encountered we've accepted all of the descriptors in queue.
-                        Any other error should cause the server to exit. */
-                    if (new_sock < 0) {
-                        if (errno != EWOULDBLOCK) {
-                            perror("Accept failed.");
-                            end_server = 1;
-                        }
-                        break;
-                    }
-                    printf("New connection.\n");
-                    fds[nfds].fd = new_sock;
-                    fds[nfds].events = POLLIN;
-                    nfds++;
-                } while (new_sock != -1);
-            }
-            else {
-                // If we're in this else statement, it means this is not the listening socket.
-                printf("This descriptor is readable: %d\n", fds[i].fd);
-                close_conn = 0;
-                solution_num = 0;
+//                     /* This error-catch should exclude EWOULDBLOCK since 
+//                         if this error is encountered we've accepted all of the descriptors in queue.
+//                         Any other error should cause the server to exit. */
+//                     if (new_sock < 0) {
+//                         if (errno != EWOULDBLOCK) {
+//                             perror("Accept failed.");
+//                             end_server = 1;
+//                         }
+//                         break;
+//                     }
+//                     printf("New connection.\n");
+//                     fds[nfds].fd = new_sock;
+//                     fds[nfds].events = POLLIN;
+//                     nfds++;
+//                 } while (new_sock != -1);
+//             }
+//             else {
+//                 // If we're in this else statement, it means this is not the listening socket.
+//                 printf("This descriptor is readable: %d\n", fds[i].fd);
+//                 close_conn = 0;
+//                 solution_num = 0;
 
-                do 
-                {
-                    // Here we do the work we want to perform.
-                // ###############################
-                    solution_num++;
-                    char msg[255];
-                    rc = recv(fds[i].fd, msg, sizeof(msg), 0);
-                    if (rc < 0) {
-                        if (errno != EWOULDBLOCK) {
-                            perror("Recv failed. Client closed.");
-                            close_conn = 1;
-                        }
-                        break;
-                    }
+//                 do 
+//                 {
+//                     // Here we do the work we want to perform.
+//                 // ###############################
+//                     solution_num++;
+//                     char msg[255];
+//                     rc = recv(fds[i].fd, msg, sizeof(msg), 0);
+//                     if (rc < 0) {
+//                         if (errno != EWOULDBLOCK) {
+//                             perror("Recv failed. Client closed.");
+//                             close_conn = 1;
+//                         }
+//                         break;
+//                     }
 
-                    printf("Client %d commanded: %s\n", client_num, msg);
+//                     printf("Client %d commanded: %s\n", client_num, msg);
 
-                    char cmd[7];
-                    // cmd = validate_command(msg); // TODO validate function
-                    // start recieving client data for kmeans. save as filename kmeans-results_clientnum_solnum.txt
+//                     char cmd[7];
+//                     // cmd = validate_command(msg); // TODO validate function
+//                     // start recieving client data for kmeans. save as filename kmeans-results_clientnum_solnum.txt
 
-                    // validate command
-                    snprintf(cmd, sizeof(cmd), "%.6s", msg); // 6 first chars
+//                     // validate command
+//                     snprintf(cmd, sizeof(cmd), "%.6s", msg); // 6 first chars
 
-                    // Generate filename
-                    char data[30];
-                    snprintf(data, sizeof(data), "%s_client%d_soln%d.txt", cmd, client_num, solution_num);
-                    printf("Sending solution: %s\n", data);
-                    send(fds[i].fd, data, strlen(data) + 1, 0);
+//                     // Generate filename
+//                     char data[30];
+//                     snprintf(data, sizeof(data), "%s_client%d_soln%d.txt", cmd, client_num, solution_num);
+//                     printf("Sending solution: %s\n", data);
+//                     send(fds[i].fd, data, strlen(data) + 1, 0);
 
-                    // Append file separator to path.
-                    char delimiter = '/';
+//                     // Append file separator to path.
+//                     char delimiter = '/';
 
-                    char command[1024];
-                    strncpy(command, cwd, sizeof(command));
-                    strncat(command, &delimiter, 1);
-                    strcat(command, msg);
+//                     char command[1024];
+//                     strncpy(command, cwd, sizeof(command));
+//                     strncat(command, &delimiter, 1);
+//                     strcat(command, msg);
 
-                    // TODO: 
-                    // Here, either run kmeans_run or matinv_run based on msg.
-                    if (strcmp(cmd, "kmeans") == 0)
-                    {
-                        kmeans_run(fds[i].fd, command);
-                    }
-                    else if (strcmp(cmd, "matinv") == 0)
-                    {
-                        matinv_run(fds[i].fd, command);
-                    }
+//                     // TODO: 
+//                     // Here, either run kmeans_run or matinv_run based on msg.
+//                     if (strcmp(cmd, "kmeans") == 0)
+//                     {
+//                         kmeans_run(fds[i].fd, command);
+//                     }
+//                     else if (strcmp(cmd, "matinv") == 0)
+//                     {
+//                         matinv_run(fds[i].fd, command);
+//                     }
 
-                // ###############################
-                } while (1);
+//                 // ###############################
+//                 } while (1);
 
-                if (close_conn) {
-                    close(fds[i].fd);
-                    fds[i].fd = -1;
-                    compress_array = 1;
-                }
-            }
-        }
+//                 if (close_conn) {
+//                     close(fds[i].fd);
+//                     fds[i].fd = -1;
+//                     compress_array = 1;
+//                 }
+//             }
+//         }
 
-        if (compress_array) {
-            compress_array = 0;
-            for (i = 0; i < nfds; i++) {
-                if (fds[i].fd == -1)
-                {
-                    for (j = i; j < nfds; j++)
-                    {
-                        fds[j].fd = fds[j+1].fd;
-                    }
-                    i--;
-                    nfds--;
-                }
-            }
-        }
-
-
-
-    } while (end_server == 0);
-
-    for (i = 0; i < nfds; i++) {
-        if (fds[i].fd >= 0)
-        {
-            close(fds[i].fd);
-        }
-    }
+//         if (compress_array) {
+//             compress_array = 0;
+//             for (i = 0; i < nfds; i++) {
+//                 if (fds[i].fd == -1)
+//                 {
+//                     for (j = i; j < nfds; j++)
+//                     {
+//                         fds[j].fd = fds[j+1].fd;
+//                     }
+//                     i--;
+//                     nfds--;
+//                 }
+//             }
+//         }
 
 
-}
+
+//     } while (end_server == 0);
+
+//     for (i = 0; i < nfds; i++) {
+//         if (fds[i].fd >= 0)
+//         {
+//             close(fds[i].fd);
+//         }
+//     }
+
+
+// }
 
 // TODO: For grade A, "-s muxscale"
 void run_with_muxscale()
@@ -648,16 +648,4 @@ int usage()
     printf("              [-s strategy]   specify the request handling strategy (fork/muxbasic/muxscale)\n");
     printf("              [-h]            help\n");
     exit(EXIT_FAILURE);
-}
-
-char *validate_command(char command[])
-{
-    char cmd[7];
-    sprintf(cmd, 7, "%.6s", command); // 6 first chars of command
-
-    if (strcmp(cmd, "matinv") != 0 && strcmp(cmd, "kmeans") != 0)
-    {
-        exit(EXIT_FAILURE);
-    }
-    return cmd;
 }
