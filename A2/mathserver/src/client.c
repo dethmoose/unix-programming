@@ -61,7 +61,7 @@ int main(int argc, char *argv[])
     while (1)
     {
         // Take user input
-        char strData[BUF_SIZE];
+        char strData[BUF_SIZE], tmp[BUF_SIZE];
         printf("Enter a command for the server: ");
         fgets(strData, BUF_SIZE, stdin);
         strData[strlen(strData) - 1] = '\0'; // Remove newline from command
@@ -83,6 +83,9 @@ int main(int argc, char *argv[])
             exit(EXIT_FAILURE);
         }
 
+        // Temp, save copy of strData before overwriting with filename
+        strncpy(tmp, strData, BUF_SIZE);
+
         // Recieve results filename from server.
         recv(sd, strData, sizeof(strData), 0);
         printf("Received the solution: %s\n", strData);
@@ -90,11 +93,13 @@ int main(int argc, char *argv[])
         strcat(filename, strData);
 
         // Check if -f flag is set in kmeans command, for input file
-        if (strncmp(strData, "kmeans", 6) == 0)
+        if (strncmp(tmp, "kmeans", 6) == 0)
         {
-            parse_command(sd, strData);
+            parse_command(sd, tmp);
         }
+
         // Receive results data
+        printf("Receiving results...\n");
         recv_file(sd, filename);
 
         // Move results filename to here?
@@ -113,6 +118,13 @@ void parse_command(int sd, char command[])
         if (strcmp(ptr, "-f") == 0)
         {
             ptr = strtok(NULL, " ");
+            // Check to make sure there actually follows another argument after "-f"
+            if (ptr == NULL)
+            {
+                printf("Ignored option: -f\n");
+                break;
+            }
+            printf("Sending -f %s\n", ptr);
             FILE *fp = fopen(ptr, "r");
             if (fp == NULL)
             {
@@ -136,6 +148,7 @@ void send_file(FILE *fp, int sd)
     memset(output, 0, BUF_SIZE);
     while (fgets(output, sizeof(output), fp) != NULL)
     {
+        printf("Sending: %s\n", output);
         if ((send(sd, output, strlen(output), 0)) == -1)
         {
             perror("Error sending file.");
@@ -143,7 +156,6 @@ void send_file(FILE *fp, int sd)
         }
         memset(output, 0, BUF_SIZE);
     }
-
     if ((send(sd, "\nOutput End\n", strlen("\nOutput End\n"), 0)) == -1)
     {
         if (errno == EPIPE)
@@ -152,7 +164,6 @@ void send_file(FILE *fp, int sd)
             perror("Error sending FIN command");
         exit(EXIT_FAILURE);
     }
-    printf("Sent file to sever\n");
 }
 
 /*

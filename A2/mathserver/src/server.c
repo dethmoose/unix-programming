@@ -90,13 +90,14 @@ int main(int argc, char *argv[])
 void recv_file(int sd, char filename[])
 {
     // Open file with append. "a" functions as O_CREAT | O_WRONLY | O_APPEND
-    FILE *fp = fopen(filename, "a");
+    FILE *fp = fopen(filename, "w"); // "w"
     if (fp == NULL)
     {
         printf("Error opening file.\n");
         exit(EXIT_FAILURE);
     }
 
+    printf("recv_file\n");
     char recvbuf[BUF_SIZE] = {0};
     memset(recvbuf, 0, BUF_SIZE);
     int recv_bytes; // How many bytes are recieved by call to recv().
@@ -106,10 +107,15 @@ void recv_file(int sd, char filename[])
         {
             perror("Error recieving file.");
         }
-        else if (strstr(recvbuf, "\nOutput End\n") != NULL) { break; }
+        else if (strstr(recvbuf, "\nOutput End\n") != NULL) 
+        {
+            printf("Receiving Output End\n", recvbuf);
+            break;
+        }
         else
         {
             // Writes recv_bytes number of bytes from recvbuf to file.
+            printf("Receivning: %s\n", recvbuf); // TODO: never run
             fwrite(recvbuf, sizeof(char), recv_bytes, fp);
         }
     }
@@ -186,10 +192,12 @@ void kmeans_run(int sd, char command[], size_t size)
     {
         char input_path[PATH_SIZE];
         snprintf(input_path, sizeof(input_path), "%s/input.txt", path);
-        printf("Receiving input file for kmeans: %s\n", input_path); // debug
+        printf("Receiving input file for kmeans, saving to %s\n", input_path); // debug
         recv_file(sd, input_path);
+        printf("After receiving input\n");
         strncat(command, " -f ", size - strlen(command));
         strncat(command, input_path, size - strlen(command));
+        printf("Command:\n%s\n", command);
     }
 
     // Concat path with results filename
@@ -198,6 +206,7 @@ void kmeans_run(int sd, char command[], size_t size)
     strncat(path, solution_str, strlen(path) - sizeof(path));
     strncat(command, " -p ", size - strlen(command));
     strncat(command, path, size - strlen(command));
+    printf("Command before executing:\n%s\n", command);
 
     // Execute kmeans
     FILE *fp = popen(command, "r");
@@ -207,9 +216,10 @@ void kmeans_run(int sd, char command[], size_t size)
     FILE *result = fopen(path, "r");
     if (result == NULL)
     {
-        perror("Error opening file.");
+        perror("Error opening file."); // Probably fails here
         exit(EXIT_FAILURE);
     }
+    printf("Sending result\n");
     send_file(result, sd);
     fclose(result);
 }
@@ -218,6 +228,7 @@ void matinv_run(int sd, char command[])
 {
     // I just realized that giving popen direct user input is super unsafe, but this isn't a course on infosec so... Don't abuse?
     FILE *fp = popen(command, "r");
+    // Check if fp == NULL?
     send_file(fp, sd);
     pclose(fp);
 
@@ -355,11 +366,12 @@ void run_with_fork()
                 }
 
                 printf("Client %d commanded: %s\n", client_num, msg);
+                // Client 1 commanded: kmeans -f src/kmeans-data-10.txt
 
                 char cmd[7]; // "kmeans" or "matinv"
-                snprintf(cmd, sizeof(cmd), "%.6s", msg); // 6 first chars (7? Add space?)
+                snprintf(cmd, sizeof(cmd), "%.6s", msg); // 6 first chars (7? Include next char? "matinvv")
 
-                if (strcmp(cmd, "matinv") != 0 && strcmp(cmd, "kmeans") != 0) // Add space after? "matinvv"
+                if (strcmp(cmd, "matinv") != 0 && strcmp(cmd, "kmeans") != 0)
                 {
                     char error[] = "Error! Valid commands: 'matinv' or 'kmeans'";
                     send(client_socket, error, sizeof(error), 0);
@@ -367,12 +379,11 @@ void run_with_fork()
                     exit(EXIT_FAILURE);
                 }
 
-                // Generate filename
+                // Generate solution filename
                 char data[30];
                 snprintf(data, sizeof(data), "%s_client%d_soln%d.txt", cmd, client_num, solution_num);
                 printf("Sending solution: %s\n", data);
-                // Why +1?
-                send(client_socket, data, strlen(data) + 1, 0); // Send solution filename to client
+                send(client_socket, data, strlen(data) + 1, 0); // Send solution filename to client (Why +1?)
 
                 // Build command string
                 char delimiter = '/';
@@ -390,7 +401,6 @@ void run_with_fork()
                 {
                     matinv_run(client_socket, command);
                 }
-
             }
         }
     }
