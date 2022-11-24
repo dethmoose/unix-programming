@@ -13,6 +13,7 @@
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <sys/poll.h>
+#include <sys/types.h>
 
 #define EXIT_NOT_IMPLEMENTED 3 /* Failing exit status for features not implemented */
 #define BUF_SIZE 256
@@ -28,7 +29,7 @@ int usage();
 int parse_command(int sd, char command[]);
 void read_options(int argc, char *argv[]);
 void recv_file(int sd, char filename[]);
-void send_file(FILE *fp, int sd);
+void send_file(int sd, char filename[]);
 void kmeans_run(int sd, char command[], size_t size);
 void matinv_run(int sd, char command[]);
 void run_with_fork();
@@ -37,8 +38,7 @@ void run_with_muxscale();
 void run_as_daemon(const char *process_name);
 
 // Filenames for output files, incrementing id
-int client_num = 0,
-    solution_num = 0;
+int client_num = 0, solution_num = 0;
 
 // Declaring the command globally because most likely all of the functions will use this.
 char cwd[PATH_SIZE] = {0}; // char command[PATH_SIZE] = {0};
@@ -89,35 +89,35 @@ int main(int argc, char *argv[])
  */
 void recv_file(int sd, char filename[])
 {
-    // Open file with append. "a" functions as O_CREAT | O_WRONLY | O_APPEND
-    FILE *fp = fopen(filename, "w"); // "w"
-    if (fp == NULL)
+    int file_size = 0;
+    char recvbuf[BUF_SIZE] = {0};
+    int recv_bytes; // How many bytes are recieved by call to recv().
+
+    if ((recv_bytes = recv(sd, recvbuf, sizeof(recvbuf), 0)) == -1)
     {
-        printf("Error opening file.\n");
+        perror("Error recieving file.");
         exit(EXIT_FAILURE);
     }
 
-    printf("recv_file\n");
-    char recvbuf[BUF_SIZE] = {0};
-    memset(recvbuf, 0, BUF_SIZE);
-    int recv_bytes; // How many bytes are recieved by call to recv().
-    while (1)
+    file_size = atoi(recvbuf);
+
+    FILE *fp = fopen(filename, "w");
+    if (fp == NULL)
     {
-        if ((recv_bytes = recv(sd, recvbuf, sizeof(recvbuf), 0)) == -1)
-        {
-            perror("Error recieving file.");
-        }
-        else if (strstr(recvbuf, "\nOutput End\n") != NULL) 
-        {
-            printf("Receiving Output End\n", recvbuf);
-            break;
-        }
-        else
-        {
-            // Writes recv_bytes number of bytes from recvbuf to file.
-            printf("Receivning: %s\n", recvbuf); // TODO: never run
-            fwrite(recvbuf, sizeof(char), recv_bytes, fp);
-        }
+        perror("Error opening file");
+        // TODO: close socket before exit?
+        exit(EXIT_FAILURE);
+    }
+
+    memset(recvbuf, 0, BUF_SIZE);
+
+    int remain = file_size;
+    int recieving = 1;
+    while ((remain > 0) && ((recv_bytes = recv(sd, recvbuf, sizeof(recvbuf), 0)) > 0))
+    {
+        // Writes recv_bytes number of bytes from recvbuf to file.
+        fwrite(recvbuf, sizeof(char), recv_bytes, fp);
+        remain -= recv_bytes;
     }
     fclose(fp);
 }
@@ -125,27 +125,45 @@ void recv_file(int sd, char filename[])
 /*
  * Send file to client.
  */
-void send_file(FILE* fp, int sd)
+void send_file(int sd, char filename[])
 {
+    // Open file
+    FILE *fp = fopen(filename, "r");
+    if (fp == NULL)
+    {
+        perror("Error opening file.");
+        exit(EXIT_FAILURE);
+    }
+    // Send file size to recieve to socket.
+    char file_size[255];
+
+    struct stat file_stat;
+    if (fstat(fileno(fp), &file_stat) < 0)
+    {
+        perror("Error reading file size.");
+        exit(EXIT_FAILURE);
+    }
+
+    snprintf(file_size, 255, "%d", file_stat.st_size);
+
+    if ((send(sd, file_size, sizeof(file_size), 0)) == -1)
+    {
+        perror("Error sending file size.");
+        exit(EXIT_FAILURE);
+    }
+
     char output[BUF_SIZE] = "";
     memset(output, 0, BUF_SIZE);
-    while (fgets(output, BUF_SIZE, fp) != NULL)
+    while (fgets(output, sizeof(output), fp) != NULL)
     {
         if ((send(sd, output, strlen(output), 0)) == -1)
         {
             perror("Error sending file.");
-            break;
+            exit(EXIT_FAILURE);
         }
         memset(output, 0, BUF_SIZE);
     }
-    if ((send(sd, "\nOutput End\n", strlen("\nOutput End\n"), 0)) == -1)
-    {
-        if (errno == EPIPE)
-            close(sd);
-        else 
-            perror("Error sending FIN command");
-        exit(EXIT_FAILURE);
-    }
+    fclose(fp);
 }
 
 /*
@@ -180,11 +198,8 @@ void kmeans_run(int sd, char command[], size_t size)
     struct stat st = {0};
     if (stat(path, &st) == -1)
     {
-        // umask(0000);
         mkdir(path, 0777);
     }
-
-    // TODO: Works without -f, with -f program gets stuck, input file empty
 
     // Get input file
     int inp = parse_command(sd, command);
@@ -192,12 +207,9 @@ void kmeans_run(int sd, char command[], size_t size)
     {
         char input_path[PATH_SIZE];
         snprintf(input_path, sizeof(input_path), "%s/input.txt", path);
-        printf("Receiving input file for kmeans, saving to %s\n", input_path); // debug
         recv_file(sd, input_path);
-        printf("After receiving input\n");
         strncat(command, " -f ", size - strlen(command));
         strncat(command, input_path, size - strlen(command));
-        printf("Command:\n%s\n", command);
     }
 
     // Concat path with results filename
@@ -206,31 +218,21 @@ void kmeans_run(int sd, char command[], size_t size)
     strncat(path, solution_str, strlen(path) - sizeof(path));
     strncat(command, " -p ", size - strlen(command));
     strncat(command, path, size - strlen(command));
-    printf("Command before executing:\n%s\n", command);
 
     // Execute kmeans
     FILE *fp = popen(command, "r");
     pclose(fp); // pclose will block until the process opened by popen terminates.
-
-    // Open results and send data to client.
-    FILE *result = fopen(path, "r");
-    if (result == NULL)
-    {
-        perror("Error opening file."); // Probably fails here
-        exit(EXIT_FAILURE);
-    }
-    printf("Sending result\n");
-    send_file(result, sd);
-    fclose(result);
+    send_file(sd, path);
 }
 
 void matinv_run(int sd, char command[])
 {
+    // TODO: matinv_run
     // I just realized that giving popen direct user input is super unsafe, but this isn't a course on infosec so... Don't abuse?
-    FILE *fp = popen(command, "r");
+    // FILE *fp = popen(command, "r");
     // Check if fp == NULL?
-    send_file(fp, sd);
-    pclose(fp);
+    // send_file(fp, sd);
+    // pclose(fp);
 
 }
 
@@ -320,7 +322,7 @@ void run_with_fork()
     int server_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (server_socket == -1)
     {
-        printf("Socket creation failed.\n");
+        perror("Socket creation failed");
         exit(EXIT_FAILURE);
     }
 
@@ -331,13 +333,13 @@ void run_with_fork()
 
     if ((bind(server_socket, (struct sockaddr *)&server_address, sizeof(server_address))) != 0)
     {
-        printf("Socket bind failed.\n");
+        perror("Socket bind failed.");
         exit(EXIT_FAILURE);
     }
 
     if ((listen(server_socket, 1)) != 0)
     {
-        printf("Listen to socket failed.\n");
+        perror("Listen to socket failed.");
         exit(EXIT_FAILURE);
     }
     printf("Listening for clients...\n");
@@ -366,7 +368,6 @@ void run_with_fork()
                 }
 
                 printf("Client %d commanded: %s\n", client_num, msg);
-                // Client 1 commanded: kmeans -f src/kmeans-data-10.txt
 
                 char cmd[7]; // "kmeans" or "matinv"
                 snprintf(cmd, sizeof(cmd), "%.6s", msg); // 6 first chars (7? Include next char? "matinvv")
