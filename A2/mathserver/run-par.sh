@@ -1,10 +1,18 @@
 #!/usr/bin/bash
-make tests
-# echo "Parallell matinv"
-# time ./matinv -n 2048 -P 0
-# echo "Sequential matinv"
-# time ./seq_matinv -n 2048 -P 0
-echo "Parallell kmeans"
-time ./kmeans 
-echo "Sequential kmeans"
-time ./seq_kmeans 
+
+run_silent() {
+    $1 $2 $3 $4 $5 >/dev/null
+}
+make -s tests
+
+echo -e "Parallell matinv:"
+time run_silent ./matinv -P 0          # -n 2048
+
+echo -e "\nSequential matinv:"
+time run_silent ./matinv-seq -P 0      # -n 2048
+
+echo -e "\nParallell kmeans:"
+time run_silent ./kmeans
+
+echo -e "\nSequential kmeans:"
+time run_silent ./kmeans-seq

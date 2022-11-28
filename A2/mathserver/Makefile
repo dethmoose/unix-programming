@@ -1,16 +1,18 @@
+# TODO Undersök pthread v lpthread, får en massa undefined references med lpthread
+
 all:
 	rm -f client server matinv kmeans
 	gcc -w -O2 ./src/client.c -o client
 	gcc -w -O2 ./src/server.c -o server
 	gcc -w -O2 -pthread ./src/matinv-par.c -o matinv
-	gcc -w -O2 -pthread ./src/kmeans-par.c -o kmeans 
-# TODO Undersök pthread v lpthread, får en massa undefined references med lpthread
+	gcc -w -O2 -pthread ./src/kmeans-par.c -o kmeans
+
 tests:
 	rm -f seq_kmeans seq_matinv matinv kmeans
 	gcc -w -O2 -pthread ./src/matinv-par.c -o matinv
 	gcc -w -O2 -pthread ./src/kmeans-par.c -o kmeans 
-	gcc -w -O2 ./src/matrix_inverse.c -o seq_matinv
-	gcc -w -O2 ./src/kmeans.c -o seq_kmeans
+	gcc -w -O2 ./src/matrix_inverse.c -o matinv-seq
+	gcc -w -O2 ./src/kmeans.c -o kmeans-seq
 	
 client:
 	gcc -w -O2 ./src/client.c -o client 
@@ -18,18 +20,18 @@ client:
 server:
 	gcc -w -O2 ./src/server.c -o server
 
-matinv-par:
+matinv: # parallel
 	gcc -w -O2 -pthread ./src/matinv-par.c -o matinv
 
-kmeans-par: 
+kmeans: # parallel
 	gcc -w -O2 -pthread ./src/kmeans-par.c -o kmeans
 
-matinv:
-	gcc -w -O2 ./src/matrix_inverse.c -o seq_matinv
+matinv-seq:
+	gcc -w -O2 ./src/matrix_inverse.c -o matinv-seq
 
-kmeans: 
-	gcc -w -O2 ./src/kmeans.c -o seq_kmeans
+kmeans-seq: 
+	gcc -w -O2 ./src/kmeans.c -o kmeans-seq
 
 clean:
-	rm -f client kmeans matinv server 
-# ./../computed_results/kmeans-results.txt
+	rm -f client kmeans matinv matinv-seq server kmeans-seq
+	rm -f -r ./../computed_results/* ./../client_results/*
