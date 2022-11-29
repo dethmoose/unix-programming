@@ -78,32 +78,36 @@ void find_inverse()
         
 
         double multiplier;
-        for (row = p + 1; row < N; row++)
+        for (row = 0; row < N; row++)
         {
             multiplier = A[row][p];
-            // Create N threads
-            children = malloc(N * sizeof(pthread_t));     // allocate array of handles
-            args = malloc(N * sizeof(struct threadArgs)); // args vector
-
-            for (int i = 0; i < N; i++)
+            if (row != p) // Perform elimination on all except the current pivot row
             {
-                args[i].id = i;
-                args[i].multiplier = multiplier;
-                args[i].row = row;
-                pthread_create(&(children[i]),    // our handle for the child
-                                NULL,              // attributes of the child
-                                multiply_columns,  // the function it should run
-                                (void *)&args[i]); // args to that function
-            }
+                // Create N threads
+                children = malloc(N * sizeof(pthread_t));     // allocate array of handles
+                args = malloc(N * sizeof(struct threadArgs)); // args vector
 
-            // Wait for all threads to complete
-            for (int j = 0; j < N; j++)
-            {
-                pthread_join(children[j], NULL);
+                for (int i = 0; i < N; i++)
+                {
+                    args[i].id = i;
+                    args[i].multiplier = multiplier;
+                    args[i].row = row;
+                    pthread_create(&(children[i]),    // our handle for the child
+                                   NULL,              // attributes of the child
+                                   multiply_columns,  // the function it should run
+                                   (void *)&args[i]); // args to that function
+                }
+
+                // Wait for all threads to complete
+                for (int j = 0; j < N; j++)
+                {
+                    pthread_join(children[j], NULL);
+                }
+                pthread_barrier_destroy(&barrier);
+                free(args);
+                free(children);
+                
             }
-            pthread_barrier_destroy(&barrier);
-            free(args);
-            free(children);
         }
     }
 }
@@ -111,18 +115,15 @@ void find_inverse()
 void *multiply_columns(void *params)
 {
     struct threadArgs *args = (struct threadArgs *)params;
-    int p = args->id;
+    int col = args->id;
     int multiplier = args->multiplier;
     int row = args->row;
 
-    int col;
-    for (col = 0; col < N; col++)
-    {
-        A[row][col] = A[row][col] - A[p][col] * multiplier; // Elimination step on A
-        I[row][col] = I[row][col] - I[p][col] * multiplier; // Elimination step on I
-    }
-    assert(A[row][p] == 0.0);
+    A[row][col] = A[row][col] - A[col][col] * multiplier; // Elimination step on A
+    I[row][col] = I[row][col] - I[col][col] * multiplier; // Elimination step on I
+    
     pthread_barrier_wait(&barrier);
+    assert(A[row][col] == 0.0);
 }
 
 void init_matrix()
