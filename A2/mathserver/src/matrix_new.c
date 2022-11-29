@@ -12,14 +12,15 @@
 #include <pthread.h>
 
 #define MAX_SIZE 4096
+#define THREADS 4
 
 typedef double matrix[MAX_SIZE][MAX_SIZE];
 pthread_barrier_t barrier;
 struct threadArgs
 {
     unsigned int id;
-    int multiplier;
-    int row;
+    int start;
+    int p;
 };
 
 int N, PRINT, maxnum; // matrix size, print switch, max number of element
@@ -75,55 +76,57 @@ void find_inverse()
         }
         assert(A[p][p] == 1.0);
 
-        
 
-        double multiplier;
-        for (row = 0; row < N; row++)
+        children = malloc(THREADS * sizeof(pthread_t));     // allocate array of handles
+        args = malloc(THREADS * sizeof(struct threadArgs)); // args vector
+
+        for (int i = 0; i < THREADS; i++)
         {
-            multiplier = A[row][p];
-            if (row != p) // Perform elimination on all except the current pivot row
-            {
-                // Create N threads
-                children = malloc(N * sizeof(pthread_t));     // allocate array of handles
-                args = malloc(N * sizeof(struct threadArgs)); // args vector
-
-                for (int i = 0; i < N; i++)
-                {
-                    args[i].id = i;
-                    args[i].multiplier = multiplier;
-                    args[i].row = row;
-                    pthread_create(&(children[i]),    // our handle for the child
-                                   NULL,              // attributes of the child
-                                   multiply_columns,  // the function it should run
-                                   (void *)&args[i]); // args to that function
-                }
-
-                // Wait for all threads to complete
-                for (int j = 0; j < N; j++)
-                {
-                    pthread_join(children[j], NULL);
-                }
-                pthread_barrier_destroy(&barrier);
-                free(args);
-                free(children);
-                
-            }
+            args[i].id = i;
+            args[i].p = p;
+            args[i].start = (N / THREADS) * i;
+            pthread_create(&(children[i]),    // our handle for the child
+                            NULL,              // attributes of the child
+                            multiply_columns,  // the function it should run
+                            (void *)&args[i]); // args to that function
         }
+        for (int j = 0; j < THREADS; j++)
+        {
+            pthread_join(children[j], NULL);
+        }
+        pthread_barrier_destroy(&barrier);
+        free(args);
+        free(children);
     }
 }
 
 void *multiply_columns(void *params)
 {
     struct threadArgs *args = (struct threadArgs *)params;
-    int col = args->id;
-    int multiplier = args->multiplier;
-    int row = args->row;
-
-    A[row][col] = A[row][col] - A[col][col] * multiplier; // Elimination step on A
-    I[row][col] = I[row][col] - I[col][col] * multiplier; // Elimination step on I
-    
-    pthread_barrier_wait(&barrier);
-    assert(A[row][col] == 0.0);
+    int col;
+    int end = args->start + (N / THREADS);
+    if (end > N)
+    {
+        end = N;
+    }
+    // printf("ID: %d Start: %d End: %d\n", args->id, args->start, end);
+    int p = args->p;
+    int row;
+    double multiplier;
+    for (row = args->start; row < end; row++)
+    {
+        multiplier = A[row][p];
+        if (row != p) // Perform elimination on all except the current pivot row
+        {
+            for (col = 0; col < N; col++)
+            {
+                A[row][col] = A[row][col] - A[p][col] * multiplier; // Elimination step on A
+                I[row][col] = I[row][col] - I[p][col] * multiplier; // Elimination step on I
+            }
+            // pthread_barrier_wait(&barrier);
+            assert(A[row][p] == 0.0);
+        }
+    }
 }
 
 void init_matrix()
