@@ -30,8 +30,8 @@ int read_options(int, char *[]);
 void init_default(void);
 void init_matrix(void);
 void print_matrix(matrix M, char name[]);
-void divide_by_pivot_value(int p, int col, double pval);
-void multiply_columns(int row, int p);
+void divide_by_pivot_value(int p, double pval);
+void multiply_columns(int p);
 void *child(void *params);
 
 int main(int argc, char *argv[])
@@ -77,43 +77,45 @@ int main(int argc, char *argv[])
 void *child(void *params)
 {
     struct threadArgs *args = (struct threadArgs *)params;
-    int row, col;
-    row = col = args->id;
+    int p = args->id;
 
-    for (int p = 0; p < N; p++)
-    {
-        double pval = A[p][p];
-        pthread_barrier_wait(&barrier);
-
-        divide_by_pivot_value(p, col, pval);
-        pthread_barrier_wait(&barrier);
-        assert(A[p][p] == 1.0);
-
-        multiply_columns(row, p);
-        pthread_barrier_wait(&barrier);
-    }
+    double pval = A[p][p];
+    pthread_barrier_wait(&barrier);
+    divide_by_pivot_value(p, pval);
+    pthread_barrier_wait(&barrier);
+    multiply_columns(p);
 }
 
-void divide_by_pivot_value(int p, int col, double pval)
+void divide_by_pivot_value(int p, double pval)
 {
-    if (pval != 0)
+    for (int col = 0; col < N; col++)
     {
-        A[p][col] /= pval;
-        I[p][col] /= pval;
+        A[p][col] = A[p][col] / pval;
+        I[p][col] = I[p][col] / pval;
     }
+    assert(A[p][p] == 1.0);
 }
 
-void multiply_columns(int row, int p)
+void multiply_columns(int p)
 {
-    if (row != p)
+        if (p == 0) {
+        print_matrix(I, "Debug I");
+        print_matrix(A, "Debug A");
+    }
+    double multiplier;
+    for (int row = 0; row < N; row++)
     {
-        double multiplier = A[row][p];
-        for (int col = 0; col < N; col++)
+        multiplier = A[row][p];
+        if (row != p)
         {
-            A[row][col] -= A[p][col] * multiplier;
-            I[row][col] -= I[p][col] * multiplier;
+            for (int col = 0; col < N; col++)
+            {
+                A[row][col] = A[row][col] - A[p][col] * multiplier;
+                I[row][col] = I[row][col] - I[p][col] * multiplier;
+            }
+            // pthread_barrier_wait(&barrier);
+            assert(A[row][p] == 0.0);
         }
-        assert(A[row][p] == 0.0);
     }
 }
 
