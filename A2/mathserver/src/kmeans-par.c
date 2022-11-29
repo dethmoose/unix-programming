@@ -157,6 +157,7 @@ int get_closest_centroid(int id)
     return nearest_cluster;
 }
 
+// TODO: O(N*k), could try parallelize only here and keep the rest as the sequential version
 void assign_cluster_to_point(int id)
 {
     int old_cluster = -1, new_cluster = -1;
@@ -275,6 +276,11 @@ int main(int argc, char *argv[])
     return 0;
 }
 
+// TODO: rename to kmeans again
+// create threads, call assign_cluster_to_point for every thread
+// does not need to share somechange between threads
+// Parallelizing only the part of the algo that has the worst time complexity,
+// keeping the O(1) parts as is, no need to parallelize them
 void *child(void *params)
 {
     struct threadArgs *args = (struct threadArgs *)params;

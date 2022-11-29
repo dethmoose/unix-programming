@@ -74,6 +74,8 @@ int main(int argc, char *argv[])
     return 0;
 }
 
+// TODO: simplify parallelization, only choose the parts of the algorithm that has 
+// the worst time complexity, e.g. by row or by column. multiply_columns?
 void *child(void *params)
 {
     struct threadArgs *args = (struct threadArgs *)params;

@@ -99,6 +99,7 @@ int get_closest_centroid(int i, int k)
 
 bool assign_clusters_to_points()
 {
+    // TODO: O(N*k), could try parallelize only here and keep the rest as the sequential version
     bool something_changed = false;
     int old_cluster = -1, new_cluster = -1;
     for (int i = 0; i < N; i++)
