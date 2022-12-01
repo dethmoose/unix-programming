@@ -9,9 +9,7 @@ Assignment 2 second deadline: 2022-12-05.
 
 * Separate machines: make sure output files are generated correctly
 
-* Matinv -n 2048 not exiting???
-* 
-* Kmeans paralell speedup is bad
+* Kmeans parallel speedup is bad
 
 ### Higher Grade
 
