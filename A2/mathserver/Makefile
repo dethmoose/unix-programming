@@ -7,7 +7,7 @@ all:
 
 tests:
 	rm -f kmeans-seq matinv-seq matinv kmeans
-	gcc -w -O2 -pthread ./src/matrix_new.c -o matinv
+	gcc -w -O2 -pthread ./src/matinv-par.c -o matinv
 	gcc -w -O2 -pthread ./src/kmeans-par.c -o kmeans 
 	gcc -w -O2 ./src/matrix_inverse.c -o matinv-seq
 	gcc -w -O2 ./src/kmeans.c -o kmeans-seq
