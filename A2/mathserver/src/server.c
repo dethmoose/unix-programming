@@ -1,9 +1,5 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <sys/resource.h>
 #include <sys/socket.h>
-#include <sys/stat.h>
 #include <sys/time.h>
 #include <syslog.h>
 #include <netinet/in.h>
@@ -14,28 +10,19 @@
 #include <sys/ioctl.h>
 #include <sys/poll.h>
 #include <sys/types.h>
+#include "../include/file_util.h"
 
 #define EXIT_NOT_IMPLEMENTED 3 /* Failing exit status for features not implemented */
-#define BUF_SIZE 256
-#define PATH_SIZE 1024
 
 // Default values
 int d = 0, port = -1;
-enum Strategy{FORK, MUXBASIC, MUXSCALE};
+enum Strategy
+{
+    FORK,
+    MUXBASIC,
+    MUXSCALE
+};
 enum Strategy strat = FORK; // Fork strategy as default.
-
-// Forward declarations
-int usage();
-int parse_command(int sd, char command[]);
-void read_options(int argc, char *argv[]);
-void recv_file(int sd, char filename[]);
-void send_file(int sd, char filename[]);
-void kmeans_run(int sd, char command[], size_t size);
-void matinv_run(int sd, char command[]);
-void run_with_fork();
-void run_with_muxbasic();
-void run_with_muxscale();
-void run_as_daemon(const char *process_name);
 
 // Filenames for output files, incrementing id
 int client_num = 0, solution_num = 0;
@@ -43,13 +30,24 @@ int client_num = 0, solution_num = 0;
 // Declaring the command globally because most likely all of the functions will use this.
 char cwd[PATH_SIZE] = {0}; // char command[PATH_SIZE] = {0};
 
+// Forward declarations
+void usage();
+void read_options(int argc, char *argv[]);
+void kmeans_run(int sd, char command[], size_t size);
+void matinv_run(int sd, char command[]);
+void run_with_fork();
+void run_with_muxbasic();
+void run_with_muxscale();
+void run_as_daemon(const char *process_name);
+
 int main(int argc, char *argv[])
 {
     read_options(argc, argv);
     if (port == -1)
     {
         printf("Error: No port assigned.\n");
-        usage(); // Exits program
+        usage();
+        exit(EXIT_FAILURE);
     }
 
     // Mostly useful becuse daemonizing the process will change working dir to root.
@@ -67,120 +65,19 @@ int main(int argc, char *argv[])
     signal(SIGPIPE, SIG_IGN);
     signal(SIGCHLD, SIG_IGN);
 
-    switch (strat) 
+    switch (strat)
     {
-        case FORK:
-            run_with_fork();
-            break;
-        case MUXBASIC:
-            run_with_muxbasic();
-            break;
-        case MUXSCALE:
-            run_with_muxscale();
-            break;
+    case FORK:
+        run_with_fork();
+        break;
+    case MUXBASIC:
+        run_with_muxbasic();
+        break;
+    case MUXSCALE:
+        run_with_muxscale();
+        break;
     }
 
-    return 0;
-}
-
-/*
- * Receive data file for kmeans from client.
- * Save it in computed_results/client<client_num>/.
- */
-void recv_file(int sd, char filename[])
-{
-    int file_size = 0;
-    char recvbuf[BUF_SIZE] = {0};
-    int recv_bytes; // How many bytes are recieved by call to recv().
-
-    if ((recv_bytes = recv(sd, recvbuf, sizeof(recvbuf), 0)) == -1)
-    {
-        perror("Error recieving file.");
-        exit(EXIT_FAILURE);
-    }
-
-    file_size = atoi(recvbuf);
-
-    FILE *fp = fopen(filename, "w");
-    if (fp == NULL)
-    {
-        perror("Error opening file");
-        // TODO: close socket before exit?
-        exit(EXIT_FAILURE);
-    }
-
-    memset(recvbuf, 0, BUF_SIZE);
-
-    int remain = file_size;
-    int recieving = 1;
-    while ((remain > 0) && ((recv_bytes = recv(sd, recvbuf, sizeof(recvbuf), 0)) > 0))
-    {
-        // Writes recv_bytes number of bytes from recvbuf to file.
-        fwrite(recvbuf, sizeof(char), recv_bytes, fp);
-        remain -= recv_bytes;
-    }
-    fclose(fp);
-}
-
-/*
- * Send file to client.
- */
-void send_file(int sd, char filename[])
-{
-    // Open file
-    FILE *fp = fopen(filename, "r");
-    if (fp == NULL)
-    {
-        perror("Error opening file.");
-        exit(EXIT_FAILURE);
-    }
-    // Send file size to recieve to socket.
-    char file_size[255];
-
-    struct stat file_stat;
-    if (fstat(fileno(fp), &file_stat) < 0)
-    {
-        perror("Error reading file size.");
-        exit(EXIT_FAILURE);
-    }
-
-    snprintf(file_size, 255, "%d", file_stat.st_size);
-
-    if ((send(sd, file_size, sizeof(file_size), 0)) == -1)
-    {
-        perror("Error sending file size.");
-        exit(EXIT_FAILURE);
-    }
-
-    char output[BUF_SIZE] = "";
-    memset(output, 0, BUF_SIZE);
-    while (fgets(output, sizeof(output), fp) != NULL)
-    {
-        if ((send(sd, output, strlen(output), 0)) == -1)
-        {
-            perror("Error sending file.");
-            exit(EXIT_FAILURE);
-        }
-        memset(output, 0, BUF_SIZE);
-    }
-    fclose(fp);
-}
-
-/*
- * Parse kmeans command for the "-f" flag.
- * If it is set, return 1.
- */
-int parse_command(int sd, char command[])
-{
-    char *ptr = strtok(command, " ");
-    while (ptr != NULL)
-    {
-        if (strcmp(ptr, "-f") == 0)
-        {
-            return 1;
-        }
-        ptr = strtok(NULL, " ");
-    }
     return 0;
 }
 
@@ -202,7 +99,7 @@ void kmeans_run(int sd, char command[], size_t size)
     }
 
     // Get input file
-    int inp = parse_command(sd, command);
+    int inp = has_f_flag(command);
     if (inp == 1)
     {
         char input_path[PATH_SIZE];
@@ -233,7 +130,6 @@ void matinv_run(int sd, char command[])
     // Check if fp == NULL?
     // send_file(fp, sd);
     // pclose(fp);
-
 }
 
 // Code by Advanced Programming in the UNIX® Environment: Second Edition - Stevens & Rago
@@ -369,7 +265,7 @@ void run_with_fork()
 
                 printf("Client %d commanded: %s\n", client_num, msg);
 
-                char cmd[7]; // "kmeans" or "matinv"
+                char cmd[7];                             // "kmeans" or "matinv"
                 snprintf(cmd, sizeof(cmd), "%.6s", msg); // 6 first chars (7? Include next char? "matinvv")
 
                 if (strcmp(cmd, "matinv") != 0 && strcmp(cmd, "kmeans") != 0)
@@ -620,67 +516,68 @@ void run_with_muxscale()
 
 void read_options(int argc, char *argv[])
 {
-    if (argc < 2)
-        usage();
-
     char *prog, *value;
     prog = *argv;
+    if (argc < 2)
+    {
+        usage();
+        exit(EXIT_FAILURE);
+    }
 
-    int i = 1;
-    for (i; i < argc; i++)
+    for (int i = 1; i < argc; i++)
     {
         if (argv[i][0] == '-')
         {
             switch (argv[i][1])
             {
-                case 'd':
-                    d = 1;
-                    break;
+            case 'd':
+                d = 1;
+                break;
 
-                case 'p':
-                    port = atoi(argv[++i]);
-                    break;
+            case 'p':
+                port = atoi(argv[++i]);
+                break;
 
-                case 's':
-                    value = argv[++i];
-                    if (strcmp(value, "fork") == 0)
-                    {
-                        strat = FORK;
-                    }
-                    else if (strcmp(value, "muxbasic") == 0)
-                    {
-                        strat = MUXBASIC;
-                    }
-                    else if (strcmp(value, "muxscale") == 0)
-                    {
-                        strat = MUXSCALE;
-                    }
-                    else
-                    {
-                        printf("%s: ignored option: -s %s\n", prog, argv[i]);
-                    }
-                    i++;
-                    break;
+            case 's':
+                value = argv[++i];
+                if (strcmp(value, "fork") == 0)
+                {
+                    strat = FORK;
+                }
+                else if (strcmp(value, "muxbasic") == 0)
+                {
+                    strat = MUXBASIC;
+                }
+                else if (strcmp(value, "muxscale") == 0)
+                {
+                    strat = MUXSCALE;
+                }
+                else
+                {
+                    printf("%s: ignored option: -s %s\n", prog, argv[i]);
+                }
+                i++;
+                break;
 
-                case 'h':
-                case 'u':
-                    usage();
-                    break;
+            case 'h':
+            case 'u':
+                usage();
+                exit(EXIT_SUCCESS);
+                break;
 
-                default:
-                    printf("%s: ignored option: -%s\n", prog, *argv);
-                    printf("HELP: try %s -h \n\n", prog);
-                    break;
+            default:
+                printf("%s: ignored option: -%s\n", prog, *argv);
+                printf("HELP: try %s -h \n\n", prog);
+                break;
             }
         }
     }
 }
 
-int usage()
+void usage()
 {
     printf("\nUsage: server [-p port]\n");
     printf("              [-d]            run as daemon\n");
     printf("              [-s strategy]   specify the request handling strategy (fork/muxbasic/muxscale)\n");
     printf("              [-h]            help\n");
-    exit(EXIT_SUCCESS);
 }

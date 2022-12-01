@@ -3,6 +3,7 @@ A2/mathserver/kmeans
 A2/mathserver/matinv
 A2/mathserver/server
 A2/computed_results/*
+A2/client_results/*
 .vscode/*
 A3/bin/*
 !A3/bin/calc3i.exe

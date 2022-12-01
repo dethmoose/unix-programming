@@ -1,7 +1,7 @@
 all:
 	rm -f client server matinv kmeans
-	gcc -w -O2 ./src/client.c -o client
-	gcc -w -O2 ./src/server.c -o server
+	gcc -w -O2 ./src/client.c ./src/file_util.c -o client
+	gcc -w -O2 ./src/server.c ./src/file_util.c -o server
 	gcc -w -O2 -pthread ./src/matinv-par.c -o matinv
 	gcc -w -O2 -pthread ./src/kmeans-par.c -o kmeans
 
@@ -13,10 +13,10 @@ tests:
 	gcc -w -O2 ./src/kmeans.c -o kmeans-seq
 	
 client:
-	gcc -w -O2 ./src/client.c -o client 
+	gcc -w -O2 ./src/client.c ./src/file_util.c -o client 
 
 server:
-	gcc -w -O2 ./src/server.c -o server
+	gcc -w -O2 ./src/server.c ./src/file_util.c -o server
 
 matinv: # parallel
 	gcc -w -O2 -pthread ./src/matinv-par.c -o matinv
