@@ -9,9 +9,9 @@ Assignment 2 second deadline: 2022-12-05.
 
 * Separate machines: make sure output files are generated correctly
 
-* Kmeans parallel speedup is bad
+* Kmeans parallel speedup is bad, lower number of threads
 
-* Handle N / THREADS (datapoints per thread) in matinv
+* Handle N / THREADS (datapoints per thread) in matinv (and kmeans)
 
 ### Higher Grade
 
