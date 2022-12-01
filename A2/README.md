@@ -11,6 +11,8 @@ Assignment 2 second deadline: 2022-12-05.
 
 * Kmeans parallel speedup is bad
 
+* Handle N / THREADS (datapoints per thread) in matinv
+
 ### Higher Grade
 
 * Investigate timeout for POLL, required? (muxbasic)

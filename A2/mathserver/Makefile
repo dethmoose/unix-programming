@@ -1,5 +1,3 @@
-# TODO Undersök pthread v lpthread, får en massa undefined references med lpthread
-
 all:
 	rm -f client server matinv kmeans
 	gcc -w -O2 ./src/client.c -o client
@@ -8,7 +6,7 @@ all:
 	gcc -w -O2 -pthread ./src/kmeans-par.c -o kmeans
 
 tests:
-	rm -f seq_kmeans seq_matinv matinv kmeans
+	rm -f kmeans-seq matinv-seq matinv kmeans
 	gcc -w -O2 -pthread ./src/matrix_new.c -o matinv
 	gcc -w -O2 -pthread ./src/kmeans-par.c -o kmeans 
 	gcc -w -O2 ./src/matrix_inverse.c -o matinv-seq

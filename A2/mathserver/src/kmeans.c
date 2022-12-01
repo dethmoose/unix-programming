@@ -14,23 +14,24 @@ typedef struct point
     int cluster; // The cluster that the point belongs to
 } point;
 
-int N = 1797;                // number of entries in the data
-int k = 9;                   // number of centroids
+int N;                       // number of entries in the data
+int k;                       // number of centroids
 point data[MAX_POINTS];      // Data coordinates
 point cluster[MAX_CLUSTERS]; // The coordinates of each cluster center (also called centroid)
-char *filename = "./src/kmeans-data.txt";
 
 void read_data()
 {
-    FILE *fp = fopen(filename, "r");
+    N = 1797;
+    k = 9;
+    FILE *fp = fopen("./src/kmeans-data.txt", "r");
     if (fp == NULL)
     {
-        perror("Cannot open file");
+        perror("Cannot open the file");
         exit(EXIT_FAILURE);
     }
 
     // Initialize points from the data file
-    // float temp = 0.0;
+    float temp;
     for (int i = 0; i < N; i++)
     {
         fscanf(fp, "%f %f", &data[i].x, &data[i].y);
@@ -48,35 +49,9 @@ void read_data()
     fclose(fp);
 }
 
-int read_options(int argc, char *argv[])
-{
-    char *prog;
-    prog = *argv;
-
-    while (++argv, --argc > 0)
-    {
-        if (**argv == '-')
-        {
-            switch (*++*argv)
-            {
-            case 'f':
-                --argc;
-                filename = *++argv;
-                N = 50; 
-                break;
-
-            default:
-                printf("%s: ignored option: -%s\n", prog, *argv);
-                break;
-            }
-        }
-    }
-    return 0;
-}
-
 int get_closest_centroid(int i, int k)
 {
-    // find the nearest centroid
+    /* find the nearest centroid */
     int nearest_cluster = -1;
     double xdist, ydist, dist, min_dist;
     min_dist = dist = INT_MAX;
@@ -117,10 +92,10 @@ bool assign_clusters_to_points()
 
 void update_cluster_centers()
 {
-    // Update the cluster centers
-    int c = 0;
+    /* Update the cluster centers */
+    int c;
     int count[MAX_CLUSTERS] = {0}; // Array to keep track of the number of points in each cluster
-    point temp[MAX_CLUSTERS] = {{0.0}};
+    point temp[MAX_CLUSTERS] = {0.0};
 
     for (int i = 0; i < N; i++)
     {
@@ -148,7 +123,6 @@ int kmeans(int k)
     } while (somechange);
     printf("Number of iterations taken = %d\n", iter);
     printf("Computed cluster numbers successfully!\n");
-    return 0;
 }
 
 void write_results()
@@ -156,7 +130,7 @@ void write_results()
     FILE *fp = fopen("./../computed_results/kmeans-results.txt", "w");
     if (fp == NULL)
     {
-        perror("Cannot open file");
+        perror("Cannot open the file");
         exit(EXIT_FAILURE);
     }
     else
@@ -169,9 +143,8 @@ void write_results()
     printf("Wrote the results to a file!\n");
 }
 
-int main(int argc, char *argv[])
+int main()
 {
-    read_options(argc, argv);
     read_data();
     kmeans(k);
     write_results();

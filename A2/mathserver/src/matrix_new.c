@@ -1,6 +1,6 @@
 /***************************************************************************
  *
- * Sequential version of Matrix Inverse
+ * Parallel version of Matrix Inverse
  * An adapted version of the code by Håkan Grahn
  *
  ***************************************************************************/
@@ -76,7 +76,6 @@ void find_inverse()
         }
         assert(A[p][p] == 1.0);
 
-
         children = malloc(THREADS * sizeof(pthread_t));     // allocate array of handles
         args = malloc(THREADS * sizeof(struct threadArgs)); // args vector
 
@@ -86,9 +85,9 @@ void find_inverse()
             args[i].p = p;
             args[i].start = (N / THREADS) * i;
             pthread_create(&(children[i]),    // our handle for the child
-                            NULL,              // attributes of the child
-                            multiply_columns,  // the function it should run
-                            (void *)&args[i]); // args to that function
+                           NULL,              // attributes of the child
+                           multiply_columns,  // the function it should run
+                           (void *)&args[i]); // args to that function
         }
         for (int j = 0; j < THREADS; j++)
         {

@@ -12,3 +12,4 @@ A3/lexyacc-code/lex.yy.o
 A3/testprogs/assemblytest
 A2/mathserver/matinv-seq
 A2/mathserver/kmeans-seq
+A2/.vscode/c_cpp_properties.json

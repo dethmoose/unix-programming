@@ -6,14 +6,13 @@ import numpy as np
 data = np.loadtxt("./../computed_results/kmeans-results.txt",
                   usecols=(0, 1),
                   dtype=np.float32)
-print(data)
+# print(data)
 
 k = 9  # number of clusters
 # Load the computed cluster numbers
-cluster = np.loadtxt(
-    "./../computed_results/kmeans-results.txt",
-    usecols=(2),
-    dtype=np.float32)
+cluster = np.loadtxt("./../computed_results/kmeans-results.txt",
+                     usecols=(2),
+                     dtype=np.float32)
 
 # Plot the results:
 for i in range(k):

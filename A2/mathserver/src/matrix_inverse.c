@@ -14,32 +14,34 @@
 
 typedef double matrix[MAX_SIZE][MAX_SIZE];
 
-int N, PRINT, maxnum; // matrix size, print switch, max number of element
-char *Init;           // matrix init type
-matrix A;             // matrix A
-matrix I = {{0.0}};   // the A inverse matrix, which will be initialized to the identity matrix
+int N;            /* matrix size		*/
+int maxnum;       /* max number of element*/
+char *Init;       /* matrix init type	*/
+int PRINT;        /* print switch		*/
+matrix A;         /* matrix A		*/
+matrix I = {0.0}; /* The A inverse matrix, which will be initialized to the identity matrix */
 
-// forward declarations
+/* forward declarations */
 void find_inverse(void);
-void init_matrix(void);
-void print_matrix(matrix M, char name[]);
-void init_default(void);
-int read_options(int, char *[]);
+void Init_Matrix(void);
+void Print_Matrix(matrix M, char name[]);
+void Init_Default(void);
+int Read_Options(int, char **);
 
-int main(int argc, char *argv[])
+int main(int argc, char **argv)
 {
     printf("Matrix Inverse\n");
-    // int i, timestart, timeend, iter;
+    int i, timestart, timeend, iter;
 
-    init_default();
-    read_options(argc, argv);
-    init_matrix();
+    Init_Default();           /* Init default values	*/
+    Read_Options(argc, argv); /* Read arguments	*/
+    Init_Matrix();            /* Init the matrix	*/
     find_inverse();
 
     if (PRINT == 1)
     {
-        // print_matrix(A, "End: Input");
-        print_matrix(I, "Inversed");
+        // Print_Matrix(A, "End: Input");
+        Print_Matrix(I, "Inversed");
     }
 }
 
@@ -48,14 +50,14 @@ void find_inverse()
     int row, col, p; // 'p' stands for pivot (numbered from 0 to N-1)
     double pivalue;  // pivot value
 
-    // Bringing the matrix A to the identity form
+    /* Bringing the matrix A to the identity form */
     for (p = 0; p < N; p++)
-    { // Outer loop
+    { /* Outer loop */
         pivalue = A[p][p];
         for (col = 0; col < N; col++)
         {
-            A[p][col] = A[p][col] / pivalue; // Division step on A
-            I[p][col] = I[p][col] / pivalue; // Division step on I
+            A[p][col] = A[p][col] / pivalue; /* Division step on A */
+            I[p][col] = I[p][col] / pivalue; /* Division step on I */
         }
         assert(A[p][p] == 1.0);
 
@@ -67,8 +69,8 @@ void find_inverse()
             {
                 for (col = 0; col < N; col++)
                 {
-                    A[row][col] = A[row][col] - A[p][col] * multiplier; // Elimination step on A
-                    I[row][col] = I[row][col] - I[p][col] * multiplier; // Elimination step on I
+                    A[row][col] = A[row][col] - A[p][col] * multiplier; /* Elimination step on A */
+                    I[row][col] = I[row][col] - I[p][col] * multiplier; /* Elimination step on I */
                 }
                 assert(A[row][p] == 0.0);
             }
@@ -76,7 +78,7 @@ void find_inverse()
     }
 }
 
-void init_matrix()
+void Init_Matrix()
 {
     int row, col;
 
@@ -102,21 +104,20 @@ void init_matrix()
         {
             for (col = 0; col < N; col++)
             {
-                if (row == col) // diagonal dominance
+                if (row == col) /* diagonal dominance */
                     A[row][col] = (double)(rand() % maxnum) + 5.0;
                 else
                     A[row][col] = (double)(rand() % maxnum) + 1.0;
             }
         }
     }
-
     if (strcmp(Init, "fast") == 0)
     {
         for (row = 0; row < N; row++)
         {
             for (col = 0; col < N; col++)
             {
-                if (row == col) // diagonal dominance
+                if (row == col) /* diagonal dominance */
                     A[row][col] = 5.0;
                 else
                     A[row][col] = 2.0;
@@ -127,12 +128,12 @@ void init_matrix()
     printf("done \n\n");
     if (PRINT == 1)
     {
-        print_matrix(A, "Begin: Input");
-        // print_matrix(I, "Begin: Inverse");
+        // Print_Matrix(A, "Begin: Input");
+        // Print_Matrix(I, "Begin: Inverse");
     }
 }
 
-void print_matrix(matrix M, char name[])
+void Print_Matrix(matrix M, char name[])
 {
     int row, col;
 
@@ -146,8 +147,7 @@ void print_matrix(matrix M, char name[])
     printf("\n\n");
 }
 
-// init default values
-void init_default()
+void Init_Default()
 {
     N = 5;
     Init = "fast";
@@ -155,16 +155,13 @@ void init_default()
     PRINT = 1;
 }
 
-// read arguments
-int read_options(int argc, char *argv[])
+int Read_Options(int argc, char **argv)
 {
     char *prog;
-    prog = *argv;
 
+    prog = *argv;
     while (++argv, --argc > 0)
-    {
         if (**argv == '-')
-        {
             switch (*++*argv)
             {
             case 'n':
@@ -208,7 +205,4 @@ int read_options(int argc, char *argv[])
                 printf("HELP: try %s -u \n\n", prog);
                 break;
             }
-        }
-    }
-    return 0;
 }
