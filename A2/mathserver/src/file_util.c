@@ -54,7 +54,7 @@ void send_file(int sd, char filename[])
     FILE *fp = fopen(filename, "r");
     if (fp == NULL)
     {
-        perror("Error opening file.");
+        perror("send_file: Error opening file");
         exit(EXIT_FAILURE);
     }
 
@@ -63,14 +63,14 @@ void send_file(int sd, char filename[])
     struct stat file_stat;
     if (fstat(fileno(fp), &file_stat) < 0)
     {
-        perror("Error reading file size.");
+        perror("Error reading file size");
         exit(EXIT_FAILURE);
     }
 
     snprintf(file_size, BUF_SIZE, "%d", file_stat.st_size);
     if ((send(sd, file_size, sizeof(file_size), 0)) == -1)
     {
-        perror("Error sending file size.");
+        perror("Error sending file size");
         exit(EXIT_FAILURE);
     }
 
@@ -81,7 +81,7 @@ void send_file(int sd, char filename[])
     {
         if ((send(sd, output, strlen(output), 0)) == -1)
         {
-            perror("Error sending file.");
+            perror("Error sending file");
             exit(EXIT_FAILURE);
         }
         memset(output, 0, BUF_SIZE);

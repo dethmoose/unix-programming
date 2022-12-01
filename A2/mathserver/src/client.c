@@ -1,6 +1,8 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <netinet/in.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -72,7 +74,7 @@ int main(int argc, char *argv[])
         // Why sometimes sending strlen chars and sometimes strlen+1 chars?
         if ((send(sd, command, strlen(command) + 1, 0)) == -1)
         {
-            perror("Error sending command.");
+            perror("Error sending command");
             exit(EXIT_FAILURE);
         }
 
