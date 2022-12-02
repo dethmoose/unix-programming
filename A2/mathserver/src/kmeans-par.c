@@ -37,7 +37,7 @@ point cluster[MAX_CLUSTERS]; // The coordinates of each cluster center (also cal
 
 // File paths
 char default_results_path[41] = "./../computed_results/kmeans-results.txt";
-char default_input_path[64] = "./src/kmeans-data-big.txt";
+char default_input_path[64] = "./src/kmeans-data.txt";
 char *results_path = default_results_path;
 char *input_path = default_input_path;
 
