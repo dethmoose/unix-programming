@@ -258,10 +258,6 @@ int read_options(int argc, char *argv[])
                 --argc;
                 PRINT = atoi(*++argv);
                 break;
-            default:
-                printf("%s: ignored option: -%s\n", prog, *argv);
-                printf("HELP: try %s -u \n\n", prog);
-                break;
             }
         }
     }

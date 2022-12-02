@@ -8,7 +8,7 @@ Assignment 2 second deadline: 2022-12-05.
 ### Grade D
 
 * Separate machines: make sure output files are generated correctly
-  - Remove folder clients_results/
+  - Remove use of folder clients_results/
 
 * Test every server feature
 

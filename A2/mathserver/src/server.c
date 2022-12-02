@@ -21,7 +21,12 @@
 
 // Default values
 int d = 0, port = -1;
-enum Strategy{FORK, MUXBASIC, MUXSCALE};
+enum Strategy
+{
+    FORK,
+    MUXBASIC,
+    MUXSCALE
+};
 enum Strategy strat = FORK; // Fork strategy as default.
 
 // Forward declarations
@@ -30,7 +35,7 @@ int parse_command(int sd, char command[]);
 void read_options(int argc, char *argv[]);
 void recv_file(int sd, char filename[]);
 void send_file(int sd, char filename[]);
-void kmeans_run(int sd, char command[], size_t size);
+void kmeans_run(int sd, char command[]);
 void matinv_run(int sd, char command[]);
 void run_with_fork();
 void run_with_muxbasic();
@@ -67,17 +72,17 @@ int main(int argc, char *argv[])
     signal(SIGPIPE, SIG_IGN);
     signal(SIGCHLD, SIG_IGN);
 
-    switch (strat) 
+    switch (strat)
     {
-        case FORK:
-            run_with_fork();
-            break;
-        case MUXBASIC:
-            run_with_muxbasic();
-            break;
-        case MUXSCALE:
-            run_with_muxscale();
-            break;
+    case FORK:
+        run_with_fork();
+        break;
+    case MUXBASIC:
+        run_with_muxbasic();
+        break;
+    case MUXSCALE:
+        run_with_muxscale();
+        break;
     }
 
     return 0;
@@ -131,7 +136,7 @@ void send_file(int sd, char filename[])
     FILE *fp = fopen(filename, "r");
     if (fp == NULL)
     {
-        perror("Error opening file.");
+        perror("send_file: Error opening file");
         exit(EXIT_FAILURE);
     }
     // Send file size to recieve to socket.
@@ -184,15 +189,15 @@ int parse_command(int sd, char command[])
     return 0;
 }
 
-void kmeans_run(int sd, char command[], size_t size)
+void kmeans_run(int sd, char command[])
 {
     // Path to directory for client results
     char path[PATH_SIZE];
-    strncpy(path, cwd, sizeof(path));
-    strncat(path, "/../computed_results/", strlen(path) - sizeof(path));
+    strncpy(path, cwd, PATH_SIZE);
+    strncat(path, "/../computed_results/", PATH_SIZE - strlen(path));
     char client[10];
     snprintf(client, sizeof(client), "client%d", client_num);
-    strncat(path, client, strlen(path) - sizeof(path));
+    strncat(path, client, PATH_SIZE - strlen(path));
 
     // Create client dir if not exist
     struct stat st = {0};
@@ -206,34 +211,79 @@ void kmeans_run(int sd, char command[], size_t size)
     if (inp == 1)
     {
         char input_path[PATH_SIZE];
-        snprintf(input_path, sizeof(input_path), "%s/input.txt", path);
+        snprintf(input_path, PATH_SIZE, "%s/input.txt", path);
         recv_file(sd, input_path);
-        strncat(command, " -f ", size - strlen(command));
-        strncat(command, input_path, size - strlen(command));
+        strncat(command, " -f ", PATH_SIZE - strlen(command));
+        strncat(command, input_path, PATH_SIZE - strlen(command));
     }
 
     // Concat path with results filename
     char solution_str[20];
     snprintf(solution_str, sizeof(solution_str), "/%d.txt", solution_num);
-    strncat(path, solution_str, strlen(path) - sizeof(path));
-    strncat(command, " -p ", size - strlen(command));
-    strncat(command, path, size - strlen(command));
+    strncat(path, solution_str, PATH_SIZE - strlen(path));
+    strncat(command, " -p ", PATH_SIZE - strlen(command));
+    strncat(command, path, PATH_SIZE - strlen(command));
 
     // Execute kmeans
     FILE *fp = popen(command, "r");
+    if (fp == NULL)
+    {
+        perror("Cannot start program");
+        exit(EXIT_FAILURE);
+    }
     pclose(fp); // pclose will block until the process opened by popen terminates.
     send_file(sd, path);
 }
 
 void matinv_run(int sd, char command[])
 {
-    // TODO: matinv_run
-    // I just realized that giving popen direct user input is super unsafe, but this isn't a course on infosec so... Don't abuse?
-    // FILE *fp = popen(command, "r");
-    // Check if fp == NULL?
-    // send_file(fp, sd);
-    // pclose(fp);
+    // Path to directory for client results
+    char path[PATH_SIZE];
+    strncpy(path, cwd, PATH_SIZE);
+    strncat(path, "/../computed_results/", PATH_SIZE - strlen(path));
+    char client[10];
+    snprintf(client, sizeof(client), "client%d", client_num);
+    strncat(path, client, PATH_SIZE - strlen(path));
 
+    // Create client dir if not exist
+    struct stat st = {0};
+    if (stat(path, &st) == -1)
+    {
+        mkdir(path, 0777);
+    }
+
+    // Concat path with results filename
+    char solution_str[20];
+    snprintf(solution_str, sizeof(solution_str), "/%d.txt", solution_num);
+    strncat(path, solution_str, PATH_SIZE - strlen(path));
+    strncat(command, " -p ", PATH_SIZE - strlen(command));
+    strncat(command, path, PATH_SIZE - strlen(command));
+
+    // Execute matinv
+    FILE *fp = popen(command, "r");
+    if (fp == NULL)
+    {
+        perror("Cannot start program");
+        exit(EXIT_FAILURE);
+    }
+
+    char buf[BUF_SIZE];
+    FILE *result_fp = fopen(path, "w");
+    if (result_fp == NULL)
+    {
+        perror("Error creating matinv results file");
+        exit(EXIT_FAILURE);
+    }
+
+    while (fgets(buf, BUF_SIZE, fp) != NULL)
+    {
+        fprintf(result_fp, "%s", buf);
+    }
+    fclose(result_fp);
+    pclose(fp);
+
+    // Send results file to client
+    send_file(sd, path);
 }
 
 // Code by Advanced Programming in the UNIX® Environment: Second Edition - Stevens & Rago
@@ -369,7 +419,7 @@ void run_with_fork()
 
                 printf("Client %d commanded: %s\n", client_num, msg);
 
-                char cmd[7]; // "kmeans" or "matinv"
+                char cmd[7];                             // "kmeans" or "matinv"
                 snprintf(cmd, sizeof(cmd), "%.6s", msg); // 6 first chars (7? Include next char? "matinvv")
 
                 if (strcmp(cmd, "matinv") != 0 && strcmp(cmd, "kmeans") != 0)
@@ -396,7 +446,7 @@ void run_with_fork()
                 // Run kmeans_run or matinv_run based on msg.
                 if (strcmp(cmd, "kmeans") == 0)
                 {
-                    kmeans_run(client_socket, command, sizeof(command));
+                    kmeans_run(client_socket, command);
                 }
                 else if (strcmp(cmd, "matinv") == 0)
                 {
@@ -633,44 +683,44 @@ void read_options(int argc, char *argv[])
         {
             switch (argv[i][1])
             {
-                case 'd':
-                    d = 1;
-                    break;
+            case 'd':
+                d = 1;
+                break;
 
-                case 'p':
-                    port = atoi(argv[++i]);
-                    break;
+            case 'p':
+                port = atoi(argv[++i]);
+                break;
 
-                case 's':
-                    value = argv[++i];
-                    if (strcmp(value, "fork") == 0)
-                    {
-                        strat = FORK;
-                    }
-                    else if (strcmp(value, "muxbasic") == 0)
-                    {
-                        strat = MUXBASIC;
-                    }
-                    else if (strcmp(value, "muxscale") == 0)
-                    {
-                        strat = MUXSCALE;
-                    }
-                    else
-                    {
-                        printf("%s: ignored option: -s %s\n", prog, argv[i]);
-                    }
-                    i++;
-                    break;
+            case 's':
+                value = argv[++i];
+                if (strcmp(value, "fork") == 0)
+                {
+                    strat = FORK;
+                }
+                else if (strcmp(value, "muxbasic") == 0)
+                {
+                    strat = MUXBASIC;
+                }
+                else if (strcmp(value, "muxscale") == 0)
+                {
+                    strat = MUXSCALE;
+                }
+                else
+                {
+                    printf("%s: ignored option: -s %s\n", prog, argv[i]);
+                }
+                i++;
+                break;
 
-                case 'h':
-                case 'u':
-                    usage();
-                    break;
+            case 'h':
+            case 'u':
+                usage();
+                break;
 
-                default:
-                    printf("%s: ignored option: -%s\n", prog, *argv);
-                    printf("HELP: try %s -h \n\n", prog);
-                    break;
+            default:
+                printf("%s: ignored option: -%s\n", prog, *argv);
+                printf("HELP: try %s -h \n\n", prog);
+                break;
             }
         }
     }

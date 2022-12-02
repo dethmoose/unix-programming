@@ -12,8 +12,6 @@
 #define BUF_SIZE 256
 #define PATH_SIZE 1024
 
-// TODO: kmeans send data to server with -f filename option
-
 // Flags and default values.
 int ip_f = 0, port = -1;
 char *ip = "";
