@@ -12,17 +12,15 @@
 #include <limits.h>
 #include <pthread.h>
 
-#define MAX_POINTS 4096
-#define MAX_CLUSTERS 32
-// #define THREADS 4
+#define MAX_POINTS 4096 * 4096
+#define MAX_CLUSTERS 32 * 32
+#define THREADS 16
 
-// pthread_barrier_init(&barrier, NULL, N);
-pthread_barrier_t barrier;
 struct threadArgs
 {
+    int start; // Start index for thread
     unsigned int i;
-    int old_cluster;
-    int new_cluster;
+    bool somechange;
 };
 
 typedef struct point
@@ -39,7 +37,7 @@ point cluster[MAX_CLUSTERS]; // The coordinates of each cluster center (also cal
 
 // File paths
 char default_results_path[41] = "./../computed_results/kmeans-results.txt";
-char default_input_path[22] = "./src/kmeans-data.txt";
+char default_input_path[64] = "./src/kmeans-data-big.txt";
 char *results_path = default_results_path;
 char *input_path = default_input_path;
 
@@ -48,8 +46,8 @@ void kmeans();
 void read_data();
 void write_results();
 void update_cluster_centers();
-bool assign_clusters_to_points();
-void get_closest_centroid(void *params);
+void assign_clusters_to_points(void *params);
+int get_closest_centroid(int i);
 void read_options(int argc, char *argv[]);
 
 int main(int argc, char *argv[])
@@ -149,82 +147,95 @@ void kmeans()
 {
     int iter = 0;
     bool somechange = false;
-    do
-    {
-        iter++; // Keep track of number of iterations
-        somechange = assign_clusters_to_points();
-        update_cluster_centers();
-    } while (somechange);
-    printf("Number of iterations taken = %d\n", iter);
-    printf("Computed cluster numbers successfully!\n");
-}
-
-bool assign_clusters_to_points()
-{
     pthread_t *children;     // Dynamic array of child threads
     struct threadArgs *args; // Argument buffer
-    bool something_changed = false;
 
-    children = malloc(N * sizeof(pthread_t));     // Allocate array of handles
-    args = malloc(N * sizeof(struct threadArgs)); // Args vector
+    children = malloc(THREADS * sizeof(pthread_t));     // Allocate array of handles
+    args = malloc(THREADS * sizeof(struct threadArgs)); // Args vector
 
-    // Let threads find closest centroids
-    for (int i = 0; i < N; i++)
+    do
     {
-        args[i].i = i;
-        args[i].old_cluster = data[i].cluster;
-        args[i].new_cluster = -1;
-        pthread_create(&(children[i]),       // Our handle for the child
-                       NULL,                 // Attributes of the child
-                       get_closest_centroid, // The function it should run
-                       (void *)&args[i]);    // Args to that function
-    }
+        somechange = false;
+        iter++; // Keep track of number of iterations
 
-    // Wait for all threads to complete
-    for (int j = 0; j < N; j++)
-    {
-        pthread_join(children[j], NULL);
-    }
-    free(children);
-
-    // Read thread args to update something_changed
-    for (int k = 0; k < N; k++)
-    {
-        if (args[k].old_cluster != args[k].new_cluster)
+        // Create threads
+        for (int i = 0; i < THREADS; i++)
         {
-            something_changed = true;
+            // Each thread gets a start and end index
+            args[i].i = i;
+            args[i].start = (N / THREADS) * i;
+            args[i].somechange = false;
+            pthread_create(&(children[i]),            // Our handle for the child
+                           NULL,                      // Attributes of the child
+                           assign_clusters_to_points, // The function it should run
+                           (void *)&args[i]);         // Args to that function
         }
-    }
+
+        // Wait for all threads to complete
+        for (int j = 0; j < THREADS; j++)
+        {
+            pthread_join(children[j], NULL);
+            if (args[j].somechange == true)
+            {
+                somechange = true;
+            }
+        }
+
+        update_cluster_centers();
+    } while (somechange);
+
+    printf("Number of iterations taken = %d\n", iter);
+    printf("Computed cluster numbers successfully!\n");
+    free(children);
     free(args);
-    return something_changed;
 }
 
-// Parallelized function
-void get_closest_centroid(void *params)
+void assign_clusters_to_points(void *params)
 {
     struct threadArgs *args = (struct threadArgs *)params;
-    int i = args->i, new_cluster = args->new_cluster;
+    int start, end, id;
+    id = args->i;
+    start = (N / THREADS) * id;
+    end = start + (N / THREADS);
 
-    // Find the nearest centroid
+    if (id == THREADS - 1)
+    {
+        end = N;
+    }
+
+    int old_cluster = -1, new_cluster = -1;
+    for (int i = start; i < end; i++)
+    { // For each data point
+        old_cluster = data[i].cluster;
+        new_cluster = get_closest_centroid(i);
+        data[i].cluster = new_cluster; // Assign a cluster to the point i
+        if (old_cluster != new_cluster)
+        {
+            args->somechange = true;
+        }
+    }
+}
+
+int get_closest_centroid(int i)
+{
+    /* find the nearest centroid */
     int nearest_cluster = -1;
     double xdist, ydist, dist, min_dist;
     min_dist = dist = INT_MAX;
-
     for (int c = 0; c < k; c++)
     { // For each centroid
         // Calculate the square of the Euclidean distance between that centroid and the point
         xdist = data[i].x - cluster[c].x;
         ydist = data[i].y - cluster[c].y;
         dist = xdist * xdist + ydist * ydist; // The square of Euclidean distance
+        // printf("%.2lf \n", dist);
         if (dist <= min_dist)
         {
             min_dist = dist;
             nearest_cluster = c;
         }
     }
-
-    // Save "return value" to thread args and to data array
-    args->new_cluster = data[i].cluster = nearest_cluster;
+    return nearest_cluster;
 }
 
 void update_cluster_centers()

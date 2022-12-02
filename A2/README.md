@@ -8,10 +8,9 @@ Assignment 2 second deadline: 2022-12-05.
 ### Grade D
 
 * Separate machines: make sure output files are generated correctly
+  - Remove folder clients_results/
 
-* Kmeans parallel speedup is bad, lower number of threads
-
-* Handle N / THREADS (datapoints per thread) in matinv (and kmeans)
+* Test every server feature
 
 ### Higher Grade
 
@@ -19,3 +18,10 @@ Assignment 2 second deadline: 2022-12-05.
   * Rewrite to be less copypaste.... Or cite source
 
 * Muxscale
+
+### Extra
+* Clean up string operations
+
+* Util modules for client & server to include (branch "include", needs testing)
+
+* Cleanup function in server.c, removing generated files in folders (keep folders?)
