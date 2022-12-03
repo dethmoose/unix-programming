@@ -10,16 +10,17 @@
 #include <string.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <math.h>
 
 #define MAX_SIZE 4096
-#define THREADS 4
+#define THREADS 32
 
 typedef double matrix[MAX_SIZE][MAX_SIZE];
 pthread_barrier_t barrier;
 struct threadArgs
 {
     unsigned int id;
-    int start;
+    int start; // Start index for thread
     int p;
 };
 
@@ -99,19 +100,21 @@ void find_inverse()
     }
 }
 
+// Parallelized function
 void *multiply_columns(void *params)
 {
     struct threadArgs *args = (struct threadArgs *)params;
-    int col;
-    int end = args->start + (N / THREADS);
-    if (end > N)
+    double multiplier;
+    int row, col, end;
+    int p = args->p;
+
+    end = args->start + (N / THREADS); // Not inclusive
+    if (args->id == THREADS - 1)
     {
         end = N;
     }
+
     // printf("ID: %d Start: %d End: %d\n", args->id, args->start, end);
-    int p = args->p;
-    int row;
-    double multiplier;
     for (row = args->start; row < end; row++)
     {
         multiplier = A[row][p];
@@ -254,10 +257,6 @@ int read_options(int argc, char *argv[])
             case 'P':
                 --argc;
                 PRINT = atoi(*++argv);
-                break;
-            default:
-                printf("%s: ignored option: -%s\n", prog, *argv);
-                printf("HELP: try %s -u \n\n", prog);
                 break;
             }
         }

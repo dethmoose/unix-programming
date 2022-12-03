@@ -7,7 +7,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include "../include/file_util.h"
-// TODO: kmeans send data to server with -f filename option
 
 // Flags and default values.
 int ip_f = 0, port = -1;
@@ -20,12 +19,6 @@ void read_options(int argc, char *argv[]);
 int main(int argc, char *argv[])
 {
     read_options(argc, argv);
-    if (port == -1)
-    {
-        printf("Error: No port assigned\n");
-        usage();
-        exit(EXIT_FAILURE);
-    }
 
     // Create a socket for connecting with server
     int sd = socket(AF_INET, SOCK_STREAM, 0);
@@ -129,6 +122,13 @@ void read_options(int argc, char *argv[])
                 break;
             }
         }
+    }
+
+    if (port == -1)
+    {
+        printf("Error: No port assigned\n");
+        usage();
+        exit(EXIT_FAILURE);
     }
 }
 

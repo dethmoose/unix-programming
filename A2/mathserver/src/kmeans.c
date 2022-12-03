@@ -4,8 +4,8 @@
 #include <stdbool.h>
 #include <limits.h>
 
-#define MAX_POINTS 4096
-#define MAX_CLUSTERS 32
+#define MAX_POINTS 4096 * 4096
+#define MAX_CLUSTERS 32 * 32
 
 typedef struct point
 {
@@ -14,29 +14,40 @@ typedef struct point
     int cluster; // The cluster that the point belongs to
 } point;
 
-int N;                       // number of entries in the data
-int k;                       // number of centroids
+int N = 0;                   // number of entries in the data
+int k = 9;                   // number of centroids
 point data[MAX_POINTS];      // Data coordinates
 point cluster[MAX_CLUSTERS]; // The coordinates of each cluster center (also called centroid)
 
+// File paths
+char default_results_path[41] = "./../computed_results/kmeans-results.txt";
+char default_input_path[64] = "./src/kmeans-data.txt";
+char *results_path = default_results_path;
+char *input_path = default_input_path;
+
 void read_data()
 {
-    N = 1797;
-    k = 9;
-    FILE *fp = fopen("./src/kmeans-data.txt", "r");
-    if (fp == NULL)
+    char line[256];
+    FILE *fp;
+    if ((fp = fopen(input_path, "r")) == NULL)
     {
-        perror("Cannot open the file");
+        perror("Cannot open file");
         exit(EXIT_FAILURE);
     }
 
     // Initialize points from the data file
-    float temp;
-    for (int i = 0; i < N; i++)
+    while (fgets(line, sizeof(line), fp))
     {
-        fscanf(fp, "%f %f", &data[i].x, &data[i].y);
-        data[i].cluster = -1; // Initialize the cluster number to -1
+        if (!isspace(line[0]) && N < MAX_POINTS) // Lines cannot start with whitespace
+        {
+            char data_buf[256] = {0};
+            strncpy(data_buf, line, strlen(line) - 2);         // Copy everything except trailing '\n\0'
+            sscanf(data_buf, "%f %f", &data[N].x, &data[N].y); // Save to data array
+            data[N].cluster = -1;                              // Initialize the cluster number to -1
+            N++;
+        }
     }
+
     printf("Read the problem data!\n");
     // Initialize centroids randomly
     srand(0); // Setting 0 as the random number generation seed
@@ -47,6 +58,53 @@ void read_data()
         cluster[i].y = data[r].y;
     }
     fclose(fp);
+}
+
+// Read command line arguments
+void read_options(int argc, char *argv[])
+{
+    char *prog;
+    prog = *argv;
+
+    while (++argv, --argc > 0)
+        if (**argv == '-')
+            switch (*++*argv)
+            {
+            case 'f':
+                --argc;
+                input_path = *++argv;
+                break;
+
+            case 'k':
+                --argc;
+                int value = atoi(*++argv);
+                if (value > MAX_CLUSTERS)
+                {
+                    k = MAX_CLUSTERS;
+                }
+                else if (value < 1)
+                {
+                    k = 1;
+                }
+                else
+                {
+                    k = value;
+                }
+                break;
+
+            case 'p':
+                --argc;
+                // Where the server wants to save the results
+                results_path = *++argv;
+                break;
+
+            default:
+                printf("%s: ignored option: -%s\n", prog, *argv);
+                printf("\nUsage: kmeans\n");
+                printf("                [-f filename]    input data file\n");
+                printf("                [-k clusters]    number of clusters\n");
+                break;
+            }
 }
 
 int get_closest_centroid(int i, int k)
@@ -126,24 +184,22 @@ int kmeans(int k)
 
 void write_results()
 {
-    FILE *fp = fopen("./../computed_results/kmeans-results.txt", "w");
+    FILE *fp = fopen(results_path, "w");
     if (fp == NULL)
     {
         perror("Cannot open the file");
         exit(EXIT_FAILURE);
     }
-    else
+    for (int i = 0; i < N; i++)
     {
-        for (int i = 0; i < N; i++)
-        {
-            fprintf(fp, "%.2f %.2f %d\n", data[i].x, data[i].y, data[i].cluster);
-        }
+        fprintf(fp, "%.2f %.2f %d\n", data[i].x, data[i].y, data[i].cluster);
     }
     printf("Wrote the results to a file!\n");
 }
 
-int main()
+int main(int argc, char *argv[])
 {
+    read_options(argc, argv);
     read_data();
     kmeans(k);
     write_results();

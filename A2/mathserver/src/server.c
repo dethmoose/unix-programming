@@ -29,12 +29,6 @@ void read_options(int argc, char *argv[]);
 int main(int argc, char *argv[])
 {
     read_options(argc, argv);
-    if (port == -1)
-    {
-        printf("Error: No port assigned.\n");
-        usage();
-        exit(EXIT_FAILURE);
-    }
 
     // Mostly useful becuse daemonizing the process will change working dir to root.
     // Need to know the path to mathserver.
@@ -45,9 +39,7 @@ int main(int argc, char *argv[])
         run_as_daemon("server");
     }
 
-    // Clean up generated folders at exit?
-    // atexit(cleanup_results);
-
+    // Ignore signals
     signal(SIGPIPE, SIG_IGN);
     signal(SIGCHLD, SIG_IGN);
 
@@ -124,6 +116,13 @@ void read_options(int argc, char *argv[])
                 break;
             }
         }
+    }
+
+    if (port < 1)
+    {
+        printf("Error: No port assigned.\n");
+        usage();
+        exit(EXIT_FAILURE);
     }
 }
 
