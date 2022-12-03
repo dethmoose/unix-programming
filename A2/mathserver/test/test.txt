@@ -1,0 +1,68 @@
+Testing server combinations of request strategy and daemon/not daemon.
+
+Checking processes with htop and 'ps axj'
+Checking zombie processes with top
+Writing result status as P=pass, F=fail
+
+-----------------------------------------------------------------
+
+[ P ] 	STRAT=FORK, 	DAEMON=FALSE
+Sending input to server and sending results to client:      works
+Handling several concurrent clients:					    works
+Zombie processes:											no
+
+-----------------------------------------------------------------
+
+[ F ] 	STRAT=FORK, 	DAEMON=TRUE
+Sending input to server and sending results to client:      FAIL! (works in some cases)
+Handling several concurrent clients:						works
+Zombie processes:                                           no
+
+
+
+Clients get stuck between receiving solution filename and getting the next "Enter a command" prompt. 
+In htop daemon processes are left but never getting any more uptime (blocking waiting for client?). 
+Not the correct output files created (client3 dir empty, no kmeans_client3_soln files created). 
+A single client connected to the daemon server can command "kmeans", it works fine. 
+When multiple clients connected to daemon server (or when client_num>1?) commanding "kmeans" gets the client stuck. 
+
+-----------------------------------------------------------------
+
+[   ] 	STRAT=MUXBASIC, DAEMON=FALSE
+Sending input to server and sending results to client: 		
+Handling several concurrent clients:						
+Zombie processes:  											
+
+-----------------------------------------------------------------
+
+[   ] 	STRAT=MUXBASIC, DAEMON=TRUE
+Sending input to server and sending results to client: 		
+Handling several concurrent clients:						
+Zombie processes:  											
+
+-----------------------------------------------------------------
+
+[   ] 	STRAT=MUXSCALE, DAEMON=FALSE
+Sending input to server and sending results to client: 		
+Handling several concurrent clients:						
+Zombie processes:  											
+
+-----------------------------------------------------------------
+
+[   ] 	STRAT=MUXSCALE, DAEMON=TRUE
+Sending input to server and sending results to client: 		
+Handling several concurrent clients:						
+Zombie processes:  											
+
+------------------------------------------------------------------
+
+Notes: 
+
+* Save the "Received the solution" print until last, to not cause uncertainty whether the program is stuck or just computing?
+
+* Remove "Closing socket" print server?
+
+* Look into daemon server + "kmeans" (without options). 
+  When d=0, "kmeans" and kmeans with -f works the same, both generates solution files and the server is responsive to client.
+  When d=1, "kmeans" without options causes the server to never write any data from kmeans. Does the 'popen' call fail?
+  How to debug daemon processes? There were no errors logged to /var/log/syslog. 
