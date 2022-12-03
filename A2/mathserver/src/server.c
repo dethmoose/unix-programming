@@ -54,7 +54,8 @@ int main(int argc, char *argv[])
     if (port == -1)
     {
         printf("Error: No port assigned.\n");
-        usage(); // Exits program
+        usage();
+        exit(EXIT_FAILURE);
     }
 
     // Mostly useful becuse daemonizing the process will change working dir to root.
@@ -69,6 +70,7 @@ int main(int argc, char *argv[])
     // Clean up generated folders at exit?
     // atexit(cleanup_results);
 
+    // Ignore signals
     signal(SIGPIPE, SIG_IGN);
     signal(SIGCHLD, SIG_IGN);
 
@@ -206,7 +208,7 @@ void kmeans_run(int sd, char command[])
         mkdir(path, 0777);
     }
 
-    // Get input file
+    // Get input file if necessary
     int inp = parse_command(sd, command);
     if (inp == 1)
     {
@@ -267,7 +269,7 @@ void matinv_run(int sd, char command[])
         exit(EXIT_FAILURE);
     }
 
-    char buf[BUF_SIZE];
+    // Save generated output to a results file
     FILE *result_fp = fopen(path, "w");
     if (result_fp == NULL)
     {
@@ -275,14 +277,14 @@ void matinv_run(int sd, char command[])
         exit(EXIT_FAILURE);
     }
 
+    // Send results file to client
+    char buf[BUF_SIZE];
     while (fgets(buf, BUF_SIZE, fp) != NULL)
     {
         fprintf(result_fp, "%s", buf);
     }
     fclose(result_fp);
     pclose(fp);
-
-    // Send results file to client
     send_file(sd, path);
 }
 
@@ -361,8 +363,8 @@ void run_as_daemon(const char *process_name)
     openlog(process_name, LOG_CONS, LOG_DAEMON);
     if (fd0 != 0 || fd1 != 1 || fd2 != 2)
     {
-        syslog(LOG_ERR, "unexpected file descriptors %d %d %d",
-               fd0, fd1, fd2);
+        // Read log at /var/log/syslog
+        syslog(LOG_ERR, "unexpected file descriptors %d %d %d", fd0, fd1, fd2);
         exit(EXIT_FAILURE);
     }
 }
@@ -400,7 +402,8 @@ void run_with_fork()
         client_num++;
         pid_t pid = fork();
 
-        if (pid == 0) // Child process
+        if (pid == 0) // Child process handles client requests
+        // Parent process (pid != 0) keeps listening for new clients
         {
             printf("Connected with client %d\n", client_num);
             solution_num = 0;
@@ -462,6 +465,7 @@ void run_with_fork()
 void run_with_muxbasic()
 {
     printf("Muxbasic not implemented\n");
+    usage();
     exit(EXIT_NOT_IMPLEMENTED);
     /*
     int len, rc, on = 1;
@@ -665,14 +669,17 @@ void run_with_muxbasic()
 void run_with_muxscale()
 {
     printf("Muxscale not implemented\n");
+    usage();
     exit(EXIT_NOT_IMPLEMENTED);
 }
 
 void read_options(int argc, char *argv[])
 {
     if (argc < 2)
+    {
         usage();
-
+        exit(EXIT_FAILURE);
+    }
     char *prog, *value;
     prog = *argv;
 
@@ -732,5 +739,4 @@ int usage()
     printf("              [-d]            run as daemon\n");
     printf("              [-s strategy]   specify the request handling strategy (fork/muxbasic/muxscale)\n");
     printf("              [-h]            help\n");
-    exit(EXIT_SUCCESS);
 }
