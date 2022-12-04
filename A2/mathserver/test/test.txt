@@ -8,14 +8,14 @@ Writing result status as P=pass, F=fail
 
 [ P ] 	STRAT=FORK, 	DAEMON=FALSE
 Sending input to server and sending results to client:      works
-Handling several concurrent clients:					    works
-Zombie processes:											no
+Handling several concurrent clients:                        works
+Zombie processes:                                           no
 
 -----------------------------------------------------------------
 
 [ F ] 	STRAT=FORK, 	DAEMON=TRUE
 Sending input to server and sending results to client:      FAIL! (works in some cases)
-Handling several concurrent clients:						works
+Handling several concurrent clients:                        works
 Zombie processes:                                           no
 
 
