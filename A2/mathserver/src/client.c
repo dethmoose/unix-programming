@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
         }
 
         // Send command to server
-        // Why sometimes sending strlen chars and sometimes strlen+1 chars?
+        // TODO: Why sometimes sending strlen chars and sometimes strlen+1 chars?
         if ((send(sd, command, strlen(command) + 1, 0)) == -1)
         {
             perror("Error sending command");
@@ -114,7 +114,6 @@ void read_options(int argc, char *argv[])
             case 'h':
             case 'u':
                 usage();
-                exit(EXIT_SUCCESS);
                 break;
             default:
                 printf("%s: ignored option: -%s\n", prog, argv[i]);
@@ -124,7 +123,7 @@ void read_options(int argc, char *argv[])
         }
     }
 
-    if (port == -1)
+    if (port < 1)
     {
         printf("Error: No port assigned\n");
         usage();

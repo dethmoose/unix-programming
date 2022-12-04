@@ -17,7 +17,7 @@ void recv_file(int sd, char filename[])
 
     if ((recv_bytes = recv(sd, recvbuf, sizeof(recvbuf), 0)) == -1)
     {
-        perror("Error recieving file.");
+        perror("Error recieving file");
         exit(EXIT_FAILURE);
     }
 
@@ -34,7 +34,6 @@ void recv_file(int sd, char filename[])
     memset(recvbuf, 0, BUF_SIZE);
 
     int remain = file_size;
-    int recieving = 1;
     while ((remain > 0) && ((recv_bytes = recv(sd, recvbuf, sizeof(recvbuf), 0)) > 0))
     {
         // Writes recv_bytes number of bytes from recvbuf to file.

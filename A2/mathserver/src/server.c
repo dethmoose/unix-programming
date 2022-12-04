@@ -1,12 +1,3 @@
-// #include <sys/resource.h>
-// #include <sys/socket.h>
-// #include <sys/time.h>
-// #include <syslog.h>
-// #include <netinet/in.h>
-// #include <errno.h>
-// #include <sys/ioctl.h>
-// #include <sys/poll.h>
-// #include <sys/types.h>
 #include <fcntl.h>
 #include <signal.h>
 #include <stdio.h>
@@ -107,7 +98,6 @@ void read_options(int argc, char *argv[])
             case 'h':
             case 'u':
                 usage();
-                exit(EXIT_SUCCESS);
                 break;
 
             default:

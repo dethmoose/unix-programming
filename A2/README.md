@@ -14,12 +14,13 @@ Assignment 2 second deadline: 2022-12-05.
 
 ### Higher Grade
 
+* Fix bug where daemon server cannot handle `kmeans` command without any options from client (probably only happens when at least 2 concurrent clients)
+
 * Investigate timeout for POLL, required? (muxbasic)
+  * Since the server only should terminate with ctrl+C we could probably skip the timeout?
   * Rewrite to be less copypaste.... Or cite source
 
 * Muxscale
 
 ### Extra
-* Clean up string operations
-
-* Util modules for client & server to include (branch "include", needs testing)
+* Clean up string operations (util functions)
