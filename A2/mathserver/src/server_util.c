@@ -29,11 +29,7 @@ void kmeans_run(int sd, char command[], char cwd[], int client_num, int solution
 {
     // Path to directory for client results
     char path[PATH_SIZE];
-    strncpy(path, cwd, PATH_SIZE);
-    strncat(path, "/../computed_results/", PATH_SIZE - strlen(path));
-    char client[10];
-    snprintf(client, sizeof(client), "client%d", client_num);
-    strncat(path, client, PATH_SIZE - strlen(path));
+    snprintf(path, PATH_SIZE, "%s/../computed_results/client%d/", cwd, client_num);
 
     // Create client dir if not exist
     struct stat st = {0};
@@ -57,6 +53,8 @@ void kmeans_run(int sd, char command[], char cwd[], int client_num, int solution
     char solution_str[20];
     snprintf(solution_str, sizeof(solution_str), "/%d.txt", solution_num);
     strncat(path, solution_str, PATH_SIZE - strlen(path));
+
+    // Concat path command to the command.
     strncat(command, " -p ", PATH_SIZE - strlen(command));
     strncat(command, path, PATH_SIZE - strlen(command));
 
@@ -78,11 +76,7 @@ void matinv_run(int sd, char command[], char cwd[], int client_num, int solution
 {
     // Path to directory for client results
     char path[PATH_SIZE];
-    strncpy(path, cwd, PATH_SIZE);
-    strncat(path, "/../computed_results/", PATH_SIZE - strlen(path));
-    char client[10];
-    snprintf(client, sizeof(client), "client%d", client_num);
-    strncat(path, client, PATH_SIZE - strlen(path));
+    snprintf(path, PATH_SIZE, "%s/../computed_results/client%d/", cwd, client_num);
 
     // Create client dir if not exist
     struct stat st = {0};
