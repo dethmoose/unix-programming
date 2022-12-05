@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
         run_with_fork(port, cwd);
         break;
     case MUXBASIC:
-        run_with_muxbasic();
+        run_with_muxbasic(port, cwd);
         break;
     case MUXSCALE:
         run_with_muxscale();
@@ -90,18 +90,19 @@ void read_options(int argc, char *argv[])
                 }
                 else
                 {
-                    printf("%s: ignored option: -s %s\n", prog, argv[i]);
+                    printf("%s: ignored option: -s %s\n", prog, value);
                 }
-                i++;
+                // i++;
                 break;
 
             case 'h':
             case 'u':
                 usage();
+                exit(EXIT_SUCCESS);
                 break;
 
             default:
-                printf("%s: ignored option: -%s\n", prog, *argv);
+                printf("%s: ignored option: %s\n", prog, argv[i]);
                 printf("HELP: try %s -h \n\n", prog);
                 break;
             }

@@ -29,6 +29,7 @@ int main(int argc, char *argv[])
     }
 
     // IP address
+    // printf("ip_f=%d, ip=%s\n", ip_f, ip);
     struct sockaddr_in server_address;
     server_address.sin_family = AF_INET;
     server_address.sin_port = htons(port);
@@ -64,15 +65,18 @@ int main(int argc, char *argv[])
         }
 
         // Send command to server
-        // TODO: Why sometimes sending strlen chars and sometimes strlen+1 chars?
-        if ((send(sd, command, strlen(command) + 1, 0)) == -1)
+        if ((send(sd, command, strlen(command), 0)) == -1)
         {
             perror("Error sending command");
             exit(EXIT_FAILURE);
         }
 
         // Recieve results filename from server.
-        recv(sd, res_filename, sizeof(res_filename), 0);
+        if (recv(sd, res_filename, sizeof(res_filename), 0) == -1)
+        {
+            perror("Error receiving filename");
+            exit(EXIT_FAILURE);
+        }
         printf("Received the solution: %s\n", res_filename);
         char filename[PATH_SIZE] = "../client_results/";
         strncat(filename, res_filename, PATH_SIZE - strlen(filename));
@@ -85,6 +89,7 @@ int main(int argc, char *argv[])
 
         // Receive results data
         recv_file(sd, filename);
+        printf("Recieved file\n");
     }
 }
 

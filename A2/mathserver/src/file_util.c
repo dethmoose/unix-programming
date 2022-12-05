@@ -21,19 +21,17 @@ void recv_file(int sd, char filename[])
         exit(EXIT_FAILURE);
     }
 
-    file_size = atoi(recvbuf);
-
     FILE *fp = fopen(filename, "w");
     if (fp == NULL)
     {
         perror("Error opening file");
-        // TODO: close socket before exit?
         exit(EXIT_FAILURE);
     }
 
+    file_size = atoi(recvbuf);
+    int remain = file_size;
     memset(recvbuf, 0, BUF_SIZE);
 
-    int remain = file_size;
     while ((remain > 0) && ((recv_bytes = recv(sd, recvbuf, sizeof(recvbuf), 0)) > 0))
     {
         // Writes recv_bytes number of bytes from recvbuf to file.

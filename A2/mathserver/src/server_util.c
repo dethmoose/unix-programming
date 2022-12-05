@@ -42,6 +42,7 @@ void kmeans_run(int sd, char command[], char cwd[], int client_num, int solution
     int inp = has_f_flag(command);
     if (inp == 1)
     {
+        printf("Kmeans input file\n");
         char input_path[PATH_SIZE];
         snprintf(input_path, PATH_SIZE, "%s/input.txt", path);
         recv_file(sd, input_path);
@@ -59,13 +60,16 @@ void kmeans_run(int sd, char command[], char cwd[], int client_num, int solution
     strncat(command, path, PATH_SIZE - strlen(command));
 
     // Execute kmeans
+    printf("executing '%s'\n", command);
     FILE *fp = popen(command, "r");
     if (fp == NULL)
     {
         perror("Cannot start program");
         exit(EXIT_FAILURE);
     }
+    printf("closing fd\n", command);
     pclose(fp); // pclose will block until the process opened by popen terminates.
+    printf("Sending file\n");
     send_file(sd, path);
 }
 
@@ -87,7 +91,7 @@ void matinv_run(int sd, char command[], char cwd[], int client_num, int solution
 
     // Concat path with results filename
     char solution_str[20];
-    snprintf(solution_str, sizeof(solution_str), "/%d.txt", solution_num);
+    snprintf(solution_str, sizeof(solution_str), "%d.txt", solution_num);
     strncat(path, solution_str, PATH_SIZE - strlen(path));
     strncat(command, " -p ", PATH_SIZE - strlen(command));
     strncat(command, path, PATH_SIZE - strlen(command));
@@ -252,13 +256,13 @@ void run_with_fork(int port, char cwd[])
                 int err = recv(client_socket, msg, sizeof(msg), 0);
                 if (err < 1)
                 {
-                    printf("Closing socket\n");
+                    // Client done
                     close(client_socket);
                     exit(EXIT_SUCCESS);
                 }
 
-                char cmd[7];                             // "kmeans" or "matinv"
-                snprintf(cmd, sizeof(cmd), "%.6s", msg); // TODO: 6 first chars (7? Include next char? What if "matinvv"?)
+                char cmd[7]; // "kmeans" or "matinv"
+                snprintf(cmd, sizeof(cmd), "%.6s", msg);
                 printf("Client %d commanded: %s\n", client_num, msg);
 
                 if (strcmp(cmd, "matinv") != 0 && strcmp(cmd, "kmeans") != 0)
@@ -274,16 +278,17 @@ void run_with_fork(int port, char cwd[])
                 char data[30];
                 snprintf(data, sizeof(data), "%s_client%d_soln%d.txt", cmd, client_num, solution_num);
                 printf("Sending solution: %s\n", data);
-                send(client_socket, data, strlen(data), 0); // Send solution filename to client 
 
-                // Build command string
-                char delimiter = '/';
-                char command[PATH_SIZE];
-                strncpy(command, cwd, sizeof(command));
-                strncat(command, &delimiter, 1);
-                strcat(command, msg);
+                // Send solution filename to client
+                if (send(client_socket, data, strlen(data), 0) == -1)
+                {
+                    perror("Error sending filename");
+                    exit(EXIT_FAILURE);
+                }
 
                 // Run kmeans_run or matinv_run based on msg.
+                char command[PATH_SIZE];
+                snprintf(command, PATH_SIZE, "%s/%s", cwd, msg);
                 if (strcmp(cmd, "kmeans") == 0)
                 {
                     kmeans_run(client_socket, command, cwd, client_num, solution_num);
@@ -297,12 +302,15 @@ void run_with_fork(int port, char cwd[])
     }
 }
 
-// TODO: For grade B, "-s muxbasic"
-// Source: IBM, <https://www.ibm.com/docs/en/i/7.2?topic=designs-using-poll-instead-select>
-void run_with_muxbasic()
+/*
+ * Muxbasic (poll)
+ * Source: IBM, <https://www.ibm.com/docs/en/i/7.2?topic=designs-using-poll-instead-select>
+ */
+void run_with_muxbasic(int port, char cwd[])
 {
     printf("Muxbasic not implemented\n");
     exit(EXIT_NOT_IMPLEMENTED);
+
     /*
     int len, rc, on = 1;
     int listen_sock = -1;
@@ -314,6 +322,7 @@ void run_with_muxbasic()
     int timeout;
     struct pollfd fds[200];
     int nfds = 1, current_size = 0, i, j;
+    int client_num = 0;
 
     listen_sock = socket(AF_INET, SOCK_STREAM, 0);
     if (listen_sock < 0)
@@ -366,13 +375,12 @@ void run_with_muxbasic()
     fds[0].fd = listen_sock;
     fds[0].events = POLLIN;
 
-    // The program will end if no activity for 5 minutes
-    timeout = (5 * 60 * 1000); // TODO: Do we need timeout??? Probably not
+    // The program will end if no activity for 5 min
+    timeout = (5 * 60 * 1000);
 
     do
     {
         printf("Polling for client...\n");
-
         rc = poll(fds, nfds, timeout);
 
         if (rc < 0)
@@ -413,7 +421,7 @@ void run_with_muxbasic()
                     {
                         if (errno != EWOULDBLOCK)
                         {
-                            perror("Accept failed.");
+                            perror("Accept failed");
                             end_server = 1;
                         }
                         break;
@@ -429,55 +437,67 @@ void run_with_muxbasic()
                 // If we're in this else statement, it means this is not the listening socket.
                 printf("This descriptor is readable: %d\n", fds[i].fd);
                 close_conn = 0;
-                solution_num = 0;
+                int solution_num = 0;
+                client_num++;
 
                 do
                 {
                     // Here we do the work we want to perform.
-                    // ###############################
+                    // ##############################################################
                     solution_num++;
-                    char msg[255];
+
+                    char msg[BUF_SIZE];
+                    memset(msg, 0, sizeof(msg));
                     rc = recv(fds[i].fd, msg, sizeof(msg), 0);
                     if (rc < 0)
                     {
                         if (errno != EWOULDBLOCK)
                         {
-                            perror("Recv failed. Client closed.");
+                            perror("Client closed");
                             close_conn = 1;
                         }
                         break;
                     }
 
+                    char cmd[7]; // "kmeans" or "matinv"
+                    snprintf(cmd, sizeof(cmd), "%.6s", msg);
                     printf("Client %d commanded: %s\n", client_num, msg);
 
-                    char cmd[7];
-                    snprintf(cmd, sizeof(cmd), "%.6s", msg); // 6 first chars
+                    if (strcmp(cmd, "matinv") != 0 && strcmp(cmd, "kmeans") != 0)
+                    {
+                        // Send error message to client
+                        char error[] = "Error! Valid commands: 'matinv' or 'kmeans'";
+                        send(fds[i].fd, error, sizeof(error), 0);
+                        close(fds[i].fd);
+                        exit(EXIT_FAILURE);
+                    }
 
-                    // Generate filename
+                    // Generate solution filename
                     char data[30];
                     snprintf(data, sizeof(data), "%s_client%d_soln%d.txt", cmd, client_num, solution_num);
                     printf("Sending solution: %s\n", data);
-                    send(fds[i].fd, data, strlen(data) + 1, 0);
 
-                    // Append file separator to path.
-                    char delimiter = '/';
+                    // Send solution filename to client
+                    if (send(fds[i].fd, data, strlen(data), 0) == -1)
+                    {
+                        perror("Error sending filename");
+                        exit(EXIT_FAILURE);
+                    }
 
-                    char command[1024];
-                    strncpy(command, cwd, sizeof(command));
-                    strncat(command, &delimiter, 1);
-                    strcat(command, msg);
-
-                    // Here, either run kmeans_run or matinv_run based on msg.
+                    // Run kmeans_run or matinv_run based on msg.
+                    char command[PATH_SIZE];
+                    snprintf(command, PATH_SIZE, "%s/%s", cwd, msg);
+                    printf("Execute args: (%s, %s, %d, %d)\n", command, cwd, client_num, solution_num);
                     if (strcmp(cmd, "kmeans") == 0)
                     {
-                        kmeans_run(fds[i].fd, command);
+                        kmeans_run(fds[i].fd, command, cwd, client_num, solution_num);
                     }
                     else if (strcmp(cmd, "matinv") == 0)
                     {
-                        matinv_run(fds[i].fd, command);
+                        matinv_run(fds[i].fd, command, cwd, client_num, solution_num);
                     }
 
-                    // ###############################
+                    // ##############################################################
                 } while (1);
 
                 if (close_conn)
@@ -518,7 +538,6 @@ void run_with_muxbasic()
     */
 }
 
-// TODO: For grade A, "-s muxscale"
 void run_with_muxscale()
 {
     printf("Muxscale not implemented\n");
