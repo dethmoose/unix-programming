@@ -32,4 +32,4 @@ kmeans-seq:
 
 clean:
 	rm -f client kmeans matinv matinv-seq server kmeans-seq
-	rm -f -r ./../computed_results/* ./../client_results/*
+	rm -f -r ./../computed_results/*

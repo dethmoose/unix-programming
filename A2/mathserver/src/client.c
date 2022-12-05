@@ -29,7 +29,6 @@ int main(int argc, char *argv[])
     }
 
     // IP address
-    // printf("ip_f=%d, ip=%s\n", ip_f, ip);
     struct sockaddr_in server_address;
     server_address.sin_family = AF_INET;
     server_address.sin_port = htons(port);
@@ -78,7 +77,7 @@ int main(int argc, char *argv[])
             exit(EXIT_FAILURE);
         }
         printf("Received the solution: %s\n", res_filename);
-        char filename[PATH_SIZE] = "../client_results/";
+        char filename[PATH_SIZE] = "../computed_results/";
         strncat(filename, res_filename, PATH_SIZE - strlen(filename));
 
         // Check if -f flag is set in kmeans command, send input file if so
@@ -89,7 +88,6 @@ int main(int argc, char *argv[])
 
         // Receive results data
         recv_file(sd, filename);
-        printf("Recieved file\n");
     }
 }
 

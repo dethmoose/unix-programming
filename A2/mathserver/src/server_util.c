@@ -42,7 +42,6 @@ void kmeans_run(int sd, char command[], char cwd[], int client_num, int solution
     int inp = has_f_flag(command);
     if (inp == 1)
     {
-        printf("Kmeans input file\n");
         char input_path[PATH_SIZE];
         snprintf(input_path, PATH_SIZE, "%s/input.txt", path);
         recv_file(sd, input_path);
@@ -60,16 +59,13 @@ void kmeans_run(int sd, char command[], char cwd[], int client_num, int solution
     strncat(command, path, PATH_SIZE - strlen(command));
 
     // Execute kmeans
-    printf("executing '%s'\n", command);
     FILE *fp = popen(command, "r");
     if (fp == NULL)
     {
         perror("Cannot start program");
         exit(EXIT_FAILURE);
     }
-    printf("closing fd\n", command);
     pclose(fp); // pclose will block until the process opened by popen terminates.
-    printf("Sending file\n");
     send_file(sd, path);
 }
 

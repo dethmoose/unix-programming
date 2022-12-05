@@ -1,6 +1,6 @@
 #!/usr/bin/bash
 
-# make -s tests
+make -s tests
 run_silent() {
     echo -e $1 $2 $3 $4 $5 $6 $7 $8 $9  # Print command.
     $2 $3 $4 $5 $6 $7 $8 $9 >/dev/null  # Execute & redirect output to /dev/null.
